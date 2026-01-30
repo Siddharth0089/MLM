@@ -1,5 +1,13 @@
 import { getDifficultyBadgeClass } from "../lib/utils";
-function ProblemDescription({ problem, currentProblemId, onProblemChange, allProblems }) {
+function ProblemDescription({ problem, currentProblemId, onProblemChange }) {
+  
+  if (!problem) {
+    return (
+      <div className="h-full flex items-center justify-center bg-base-200">
+        <span className="loading loading-spinner loading-lg text-primary"></span>
+      </div>
+    );
+  }
   return (
     <div className="h-full overflow-y-auto bg-base-200">
       {/* HEADER SECTION */}
@@ -19,11 +27,11 @@ function ProblemDescription({ problem, currentProblemId, onProblemChange, allPro
             value={currentProblemId}
             onChange={(e) => onProblemChange(e.target.value)}
           >
-            {allProblems.map((p) => (
+            {/* {allProblems.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.title} - {p.difficulty}
               </option>
-            ))}
+            ))} */}
           </select>
         </div>
       </div>

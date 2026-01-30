@@ -1,47 +1,30 @@
 import express from "express";
-import path from "path";
 import cors from "cors";
-import { serve } from "inngest/express";
-import { clerkMiddleware } from "@clerk/express";
-
-import { ENV } from "./lib/env.js";
-import { connectDB } from "./lib/db.js";
-import { inngest, functions } from "./lib/inngest.js";
-
-import chatRoutes from "./routes/chatRoutes.js";
-import sessionRoutes from "./routes/sessionRoute.js";
+import { connectDB } from "./db/connect.js";
+import judgeRoutes from "./routes/judge.routes.js";
+import "dotenv/config";
 
 const app = express();
+app.use(cors());
+app.use(express.json({ limit: "2mb" }));
 
-const __dirname = path.resolve();
+app.use("/api", judgeRoutes);
 
-// middleware
-app.use(express.json());
-// credentials:true meaning?? => server allows a browser to include cookies on request
-app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
-app.use(clerkMiddleware()); // this adds auth field to request object: req.auth()
+app.get("/", (_, res) => res.send("Judge backend running ✅"));
 
-app.use("/api/inngest", serve({ client: inngest, functions }));
-app.use("/api/chat", chatRoutes);
-app.use("/api/sessions", sessionRoutes);
+const PORT = process.env.PORT || 5000;
+
+
 
 app.get("/health", (req, res) => {
   res.status(200).json({ msg: "api is up and running" });
 });
 
-// make our app ready for deployment
-if (ENV.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
-
-  app.get("/{*any}", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
-  });
-}
 
 const startServer = async () => {
   try {
     await connectDB();
-    app.listen(ENV.PORT, () => console.log("Server is running on port:", ENV.PORT));
+    app.listen(PORT, () => console.log("Server is running on port:", PORT));
   } catch (error) {
     console.error("💥 Error starting the server", error);
   }
