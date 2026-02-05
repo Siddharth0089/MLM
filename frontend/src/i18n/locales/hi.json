@@ -1,0 +1,79 @@
+{
+    "nav": {
+        "dashboard": "डैशबोर्ड",
+        "tagline": "सीमाओं के बिना बैठकें",
+        "signOut": "साइन आउट"
+    },
+    "meeting": {
+        "title": "बैठक",
+        "notes": "बैठक नोट्स",
+        "captions": "लाइव कैप्शन",
+        "participants": "प्रतिभागी",
+        "endMeeting": "बैठक समाप्त करें",
+        "endMeetingConfirm": "क्या आप वाकई इस बैठक को समाप्त करना चाहते हैं? बैठक नोट्स सभी प्रतिभागियों को ईमेल किए जाएंगे।",
+        "host": "मेज़बान",
+        "joinedAt": "शामिल हुए",
+        "settings": "सेटिंग्स",
+        "enableTranslation": "ऑटो-अनुवाद सक्षम करें",
+        "enableCaptions": "लाइव कैप्शन सक्षम करें",
+        "showOriginal": "मूल दिखाएं",
+        "syncing": "सिंक हो रहा है...",
+        "saved": "सहेजा गया",
+        "translating": "ऑटो-अनुवाद"
+    },
+    "dashboard": {
+        "title": "डैशबोर्ड",
+        "createMeeting": "नई बैठक",
+        "activeMeetings": "सक्रिय बैठकें",
+        "recentMeetings": "हाल की बैठकें",
+        "noMeetings": "कोई बैठक नहीं मिली",
+        "joinMeeting": "शामिल हों",
+        "welcome": "स्वागत है",
+        "stats": {
+            "totalMeetings": "कुल बैठकें",
+            "activeMeetings": "सक्रिय",
+            "completedMeetings": "पूर्ण"
+        }
+    },
+    "settings": {
+        "language": "भाषा",
+        "selectLanguage": "अपनी पसंदीदा भाषा चुनें",
+        "autoTranslate": "बैठक नोट्स का ऑटो-अनुवाद करें",
+        "showCaptions": "बैठकों के दौरान लाइव कैप्शन दिखाएं"
+    },
+    "common": {
+        "loading": "लोड हो रहा है...",
+        "error": "त्रुटि",
+        "success": "सफलता",
+        "save": "सहेजें",
+        "cancel": "रद्द करें",
+        "delete": "हटाएं",
+        "edit": "संपादित करें",
+        "create": "बनाएं",
+        "search": "खोजें",
+        "close": "बंद करें"
+    },
+    "caption": {
+        "speaking": "बोल रहे हैं",
+        "interim": "(सुन रहे हैं...)",
+        "noTranscript": "लाइव कैप्शन सक्षम करने के लिए माइक बटन दबाएं"
+    },
+    "email": {
+        "minutesSent": "बैठक नोट्स सभी प्रतिभागियों को भेजे गए",
+        "sendingMinutes": "बैठक नोट्स भेज रहे हैं..."
+    },
+    "home": {
+        "title": "Meetio",
+        "subtitle": "अपनी बैठकों में भाषा की बाधाओं को तोड़ें",
+        "description": "बैठक नोट्स और लाइव कैप्शन के लिए रीयल-टाइम अनुवाद। हर कोई अपनी भाषा में सुनता और पढ़ता है।",
+        "getStarted": "शुरू करें",
+        "features": {
+            "translation": "रीयल-टाइम अनुवाद",
+            "translationDesc": "नोट्स और कैप्शन तुरंत अनुवादित",
+            "captions": "लाइव कैप्शन",
+            "captionsDesc": "सभी भाषाओं में ऑटोमैटिक स्पीच-टू-टेक्स्ट",
+            "email": "बैठक नोट्स",
+            "emailDesc": "प्रत्येक उपयोगकर्ता की भाषा में सारांश ईमेल"
+        }
+    }
+}

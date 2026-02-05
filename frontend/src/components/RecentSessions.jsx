@@ -4,7 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 
 function RecentSessions({ sessions, isLoading }) {
   return (
-    <div className="card bg-base-100 border-2 border-accent/20 hover:border-accent/30 mt-8">
+    <div className="glass-panel rounded-2xl border-0 mt-8">
       <div className="card-body">
         <div className="flex items-center gap-3 mb-6">
           <div className="p-2 bg-gradient-to-br from-accent to-secondary rounded-xl">
@@ -22,11 +22,10 @@ function RecentSessions({ sessions, isLoading }) {
             sessions.map((session) => (
               <div
                 key={session._id}
-                className={`card relative ${
-                  session.status === "active"
-                    ? "bg-success/10 border-success/30 hover:border-success/60"
-                    : "bg-base-200 border-base-300 hover:border-primary/30"
-                }`}
+                className={`card relative ${session.status === "active"
+                    ? "bg-success/10 border-success/30 hover:border-success/60 hover:shadow-success/20"
+                    : "glass-panel-dark border-0 hover:bg-white/10"
+                  }`}
               >
                 {session.status === "active" && (
                   <div className="absolute top-3 right-3">
@@ -40,11 +39,10 @@ function RecentSessions({ sessions, isLoading }) {
                 <div className="card-body p-5">
                   <div className="flex items-start gap-3 mb-4">
                     <div
-                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        session.status === "active"
+                      className={`w-12 h-12 rounded-xl flex items-center justify-center ${session.status === "active"
                           ? "bg-gradient-to-br from-success to-success/70"
                           : "bg-gradient-to-br from-primary to-secondary"
-                      }`}
+                        }`}
                     >
                       <Code2 className="w-6 h-6 text-white" />
                     </div>

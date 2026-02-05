@@ -1,0 +1,79 @@
+{
+    "nav": {
+        "dashboard": "Dashboard",
+        "tagline": "Meetings Without Borders",
+        "signOut": "Sign Out"
+    },
+    "meeting": {
+        "title": "Meeting",
+        "notes": "Meeting Notes",
+        "captions": "Live Captions",
+        "participants": "participants",
+        "endMeeting": "End Meeting",
+        "endMeetingConfirm": "Are you sure you want to end this meeting? Meeting notes will be emailed to all participants.",
+        "host": "Host",
+        "joinedAt": "Joined at",
+        "settings": "Settings",
+        "enableTranslation": "Enable Auto-Translation",
+        "enableCaptions": "Enable Live Captions",
+        "showOriginal": "Show Original",
+        "syncing": "Syncing...",
+        "saved": "Saved",
+        "translating": "Auto-translating to"
+    },
+    "dashboard": {
+        "title": "Dashboard",
+        "createMeeting": "New Meeting",
+        "activeMeetings": "Active Meetings",
+        "recentMeetings": "Recent Meetings",
+        "noMeetings": "No meetings found",
+        "joinMeeting": "Join",
+        "welcome": "Welcome",
+        "stats": {
+            "totalMeetings": "Total Meetings",
+            "activeMeetings": "Active",
+            "completedMeetings": "Completed"
+        }
+    },
+    "settings": {
+        "language": "Language",
+        "selectLanguage": "Select your preferred language",
+        "autoTranslate": "Auto-translate meeting notes",
+        "showCaptions": "Show live captions during meetings"
+    },
+    "common": {
+        "loading": "Loading...",
+        "error": "Error",
+        "success": "Success",
+        "save": "Save",
+        "cancel": "Cancel",
+        "delete": "Delete",
+        "edit": "Edit",
+        "create": "Create",
+        "search": "Search",
+        "close": "Close"
+    },
+    "caption": {
+        "speaking": "Speaking",
+        "interim": "(listening...)",
+        "noTranscript": "Click the mic button to enable live captions"
+    },
+    "email": {
+        "minutesSent": "Meeting notes sent to all participants",
+        "sendingMinutes": "Sending meeting notes..."
+    },
+    "home": {
+        "title": "Meetio",
+        "subtitle": "Break language barriers in your meetings",
+        "description": "Real-time translation for meeting notes and live captions. Everyone hears and reads in their own language.",
+        "getStarted": "Get Started",
+        "features": {
+            "translation": "Real-time Translation",
+            "translationDesc": "Notes and captions translated instantly",
+            "captions": "Live Captions",
+            "captionsDesc": "Automatic speech-to-text in all languages",
+            "email": "Meeting Notes",
+            "emailDesc": "Summaries emailed in each user's language"
+        }
+    }
+}

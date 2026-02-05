@@ -1,25 +1,32 @@
+import React from "react";
 import {
   ArrowRightIcon,
   Code2Icon,
-  CrownIcon,
   SparklesIcon,
   UsersIcon,
   ZapIcon,
   LoaderIcon,
+  PowerIcon,
 } from "lucide-react";
 import { Link } from "react-router";
-import { getDifficultyBadgeClass } from "../lib/utils";
+import { useEndSession } from "../hooks/useSessions";
+import { useQueryClient } from "@tanstack/react-query";
 
 function ActiveSessions({ sessions, isLoading, isUserInSession }) {
+  const endSessionMutation = useEndSession();
+  const queryClient = useQueryClient();
+
+  /* Removed handleDeactivate logic */
+
   return (
-    <div className="lg:col-span-2 card bg-base-100 border-2 border-primary/20 hover:border-primary/30 h-full">
+    <div className="lg:col-span-2 glass-panel rounded-2xl border-0 h-full">
       <div className="card-body">
         {/* HEADERS SECTION */}
         <div className="flex items-center justify-between mb-6">
           {/* TITLE AND ICON */}
           <div className="flex items-center gap-3">
             <div className="p-2 bg-gradient-to-br from-primary to-secondary rounded-xl">
-              <ZapIcon className="size-5" />
+              <ZapIcon className="size-5 text-white" />
             </div>
             <h2 className="text-2xl font-black">Live Sessions</h2>
           </div>
@@ -40,55 +47,52 @@ function ActiveSessions({ sessions, isLoading, isUserInSession }) {
             sessions.map((session) => (
               <div
                 key={session._id}
-                className="card bg-base-200 border-2 border-base-300 hover:border-primary/50"
+                className="glass-panel-dark border-0 hover:bg-white/10 transition-colors rounded-xl"
               >
-                <div className="flex items-center justify-between gap-4 p-5">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5">
                   {/* LEFT SIDE */}
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="relative size-14 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                  <div className="flex items-center gap-4 flex-1 w-full sm:w-auto">
+                    <div className="relative size-14 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg">
                       <Code2Icon className="size-7 text-white" />
                       <div className="absolute -top-1 -right-1 size-4 bg-success rounded-full border-2 border-base-100" />
                     </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-bold text-lg truncate">{session.problem}</h3>
-                        <span
-                          className={`badge badge-sm ${getDifficultyBadgeClass(
-                            session.difficulty
-                          )}`}
-                        >
-                          {session.difficulty.slice(0, 1).toUpperCase() +
-                            session.difficulty.slice(1)}
+                        <h3 className="font-bold text-lg truncate">{session.sessionName}</h3>
+                        <span className="badge badge-sm badge-success">
+                          Active
                         </span>
                       </div>
 
                       <div className="flex items-center gap-4 text-sm opacity-80">
                         <div className="flex items-center gap-1.5">
-                          <CrownIcon className="size-4" />
-                          <span className="font-medium">{session.host?.name}</span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
                           <UsersIcon className="size-4" />
-                          <span className="text-xs">{session.participant ? "2/2" : "1/2"}</span>
+                          <span className="text-xs">{session.participants?.length || 0} participant(s)</span>
                         </div>
-                        {session.participant && !isUserInSession(session) ? (
-                          <span className="badge badge-error badge-sm">FULL</span>
-                        ) : (
-                          <span className="badge badge-success badge-sm">OPEN</span>
-                        )}
                       </div>
                     </div>
                   </div>
 
-                  {session.participant && !isUserInSession(session) ? (
-                    <button className="btn btn-disabled btn-sm">Full</button>
-                  ) : (
+                  <div className="flex items-center gap-2">
                     <Link to={`/session/${session._id}`} className="btn btn-primary btn-sm gap-2">
-                      {isUserInSession(session) ? "Rejoin" : "Join"}
+                      Join
                       <ArrowRightIcon className="size-4" />
                     </Link>
-                  )}
+
+                    <DeleteSessionButton
+                      sessionId={session._id}
+                      onConfirm={() => {
+                        endSessionMutation.mutate(session._id, {
+                          onSuccess: () => {
+                            queryClient.invalidateQueries(["activeSessions"]);
+                            queryClient.invalidateQueries(["myRecentSessions"]);
+                          }
+                        });
+                      }}
+                      isPending={endSessionMutation.isPending}
+                    />
+                  </div>
                 </div>
               </div>
             ))
@@ -106,4 +110,50 @@ function ActiveSessions({ sessions, isLoading, isUserInSession }) {
     </div>
   );
 }
+
+function DeleteSessionButton({ sessionId, onConfirm, isPending }) {
+  const [confirming, setConfirming] = React.useState(false);
+
+  // Reset confirmation state after 3 seconds if not clicked
+  React.useEffect(() => {
+    if (confirming) {
+      const timer = setTimeout(() => setConfirming(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [confirming]);
+
+  if (confirming) {
+    return (
+      <button
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onConfirm();
+        }}
+        disabled={isPending}
+        className="btn btn-error btn-sm gap-1 animate-pulse"
+        title="Click again to confirm"
+      >
+        {isPending ? <LoaderIcon className="size-4 animate-spin" /> : <PowerIcon className="size-4" />}
+        <span className="text-xs">Confirm?</span>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setConfirming(true);
+      }}
+      disabled={isPending}
+      className="btn btn-ghost btn-sm btn-square text-error hover:bg-error/10 tooltip tooltip-left"
+      data-tip="Deactivate Session"
+    >
+      <PowerIcon className="size-4" />
+    </button>
+  );
+}
+
 export default ActiveSessions;

@@ -1,288 +1,462 @@
-import { useUser } from "@clerk/clerk-react";
-import { useEffect, useState } from "react";
+import { useUser } from "../contexts/UserContext";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
-import { useEndSession, useJoinSession, useSessionById } from "../hooks/useSessions";
-import { PROBLEMS } from "../data/problems";
-import { executeCode } from "../lib/piston";
-import Navbar from "../components/Navbar";
-import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-import { getDifficultyBadgeClass } from "../lib/utils";
-import { Loader2Icon, LogOutIcon, PhoneOffIcon } from "lucide-react";
-import CodeEditorPanel from "../components/CodeEditorPanel";
-import OutputPanel from "../components/OutputPanel";
-
+import { useTranslation } from "react-i18next";
+import { useEndSession, useSessionById } from "../hooks/useSessions";
+import { useSocket } from "../hooks/useSocket";
+import { useLanguage } from "../hooks/useLanguage";
+import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
 import useStreamClient from "../hooks/useStreamClient";
-import { StreamCall, StreamVideo } from "@stream-io/video-react-sdk";
-import VideoCallUI from "../components/VideoCallUI";
+import Navbar from "../components/Navbar";
+import MeetingNotesPanel from "../components/meeting/MeetingNotesPanel";
+import CaptionOverlay from "../components/meeting/CaptionOverlay";
+import LanguageSwitcher from "../components/LanguageSwitcher";
+import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
+
+// Stream.io Video SDK
+import {
+  StreamVideo,
+  StreamCall,
+  StreamTheme,
+  SpeakerLayout,
+  CallControls,
+  CallingState,
+  useCallStateHooks,
+} from "@stream-io/video-react-sdk";
+import "@stream-io/video-react-sdk/dist/css/styles.css";
+
+import {
+  Loader2Icon,
+  LogOutIcon,
+  VideoIcon,
+  MicIcon,
+  MicOffIcon,
+  VideoOffIcon,
+  GlobeIcon,
+  UsersIcon,
+  SettingsIcon,
+  MessageSquareIcon,
+  HandIcon,
+  MonitorUp,
+  PhoneOff,
+} from "lucide-react";
+import ChatPanel from "../components/meeting/ChatPanel";
+import toast from "react-hot-toast";
 
 function SessionPage() {
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id: sessionId } = useParams();
+  const { t } = useTranslation();
   const { user } = useUser();
-  const [output, setOutput] = useState(null);
-  const [isRunning, setIsRunning] = useState(false);
+  const { language, changeLanguage, availableLanguages } = useLanguage();
 
-  const { data: sessionData, isLoading: loadingSession, refetch } = useSessionById(id);
-
-  const joinSessionMutation = useJoinSession();
+  // Session data
+  const { data: sessionData, isLoading: loadingSession } = useSessionById(sessionId);
   const endSessionMutation = useEndSession();
-
   const session = sessionData?.session;
-  const isHost = session?.host?.clerkId === user?.id;
-  const isParticipant = session?.participant?.clerkId === user?.id;
 
-  const { call, channel, chatClient, isInitializingCall, streamClient } = useStreamClient(
+  // Stream.io Video Client (Chat is handled by Socket.IO now)
+  const { streamClient, call, isInitializingCall } = useStreamClient(
     session,
     loadingSession,
-    isHost,
-    isParticipant
+    user
   );
 
-  // find the problem data based on session problem title
-  const problemData = session?.problem
-    ? Object.values(PROBLEMS).find((p) => p.title === session.problem)
-    : null;
+  // Socket connection (Use corrected user properties)
+  const {
+    socket,
+    isConnected,
+    joinMeeting,
+    sendCaption,
+    endMeeting,
+    raiseHand,
+    updateLanguage
+  } = useSocket(user?.id, user?.fullName || user?.name);
 
-  const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const [code, setCode] = useState(problemData?.starterCode?.[selectedLanguage] || "");
+  // Speech recognition for live captions
+  const {
+    isListening,
+    transcript,
+    interimTranscript,
+    isSupported: speechSupported,
+    startListening,
+    stopListening,
+    resetTranscript,
+  } = useSpeechRecognition(language);
 
-  // auto-join session if user is not already a participant and not the host
+  const [captions, setCaptions] = useState([]);
+  const [showCaptions, setShowCaptions] = useState(true);
+  const [participants, setParticipants] = useState([]);
+  const lastTranscriptRef = useRef("");
+  const lastInterimRef = useRef("");
+  const interimThrottleRef = useRef(null);
+
+  // Join meeting when connected
   useEffect(() => {
-    if (!session || !user || loadingSession) return;
-    if (isHost || isParticipant) return;
+    if (socket && isConnected && sessionId && user) {
+      joinMeeting(sessionId, language);
+    }
+  }, [socket, isConnected, sessionId, user, joinMeeting]);
 
-    joinSessionMutation.mutate(id, { onSuccess: refetch });
+  // Update backend when language changes (for real-time translation)
+  const prevLanguageRef = useRef(language);
+  useEffect(() => {
+    if (socket && isConnected && sessionId && language !== prevLanguageRef.current) {
+      updateLanguage(sessionId, language);
+      prevLanguageRef.current = language;
+      console.log(`Language updated to: ${language}`);
+    }
+  }, [socket, isConnected, sessionId, language, updateLanguage]);
 
-    // remove the joinSessionMutation, refetch from dependencies to avoid infinite loop
-  }, [session, user, loadingSession, isHost, isParticipant, id]);
+  // Listen for incoming captions
+  useEffect(() => {
+    if (!socket) return;
 
-  // redirect the "participant" when session ends
+    const handleCaption = (data) => {
+      setCaptions((prev) => {
+        const captionWithId = {
+          ...data,
+          _id: `${data.speakerUserId}-${Date.now()}`,
+          speakerName: data.speakerName || "Participant",
+        };
+
+        // If this is an interim caption (not final), replace any existing interim from same speaker
+        if (!data.isFinal) {
+          // Find the last caption from this speaker
+          const lastFromSpeaker = prev.findIndex(
+            (c) => c.speakerUserId === data.speakerUserId && !c.isFinal
+          );
+
+          if (lastFromSpeaker !== -1) {
+            // Replace the existing interim caption
+            const updated = [...prev];
+            updated[lastFromSpeaker] = captionWithId;
+            return updated;
+          }
+        }
+
+        // For final captions or first interim, add as new entry
+        // Also remove any interim captions from the same speaker when we get a final
+        let updated = data.isFinal
+          ? prev.filter((c) => !(c.speakerUserId === data.speakerUserId && !c.isFinal))
+          : prev;
+
+        updated = [...updated, captionWithId];
+        return updated.slice(-15); // Keep last 15
+      });
+    };
+
+    const handleParticipantJoined = (data) => {
+      setParticipants((prev) => {
+        if (!prev.find(p => p.userId === data.userId)) {
+          return [...prev, data];
+        }
+        return prev;
+      });
+    };
+
+    const handleMeetingEnded = () => {
+      navigate("/dashboard");
+    };
+
+
+
+    const handleHandRaised = (data) => {
+      toast(`${data.userName} raised their hand! ✋`, {
+        icon: '✋',
+        style: {
+          borderRadius: '10px',
+          background: '#333',
+          color: '#fff',
+        },
+      });
+    };
+
+    socket.on("caption:incoming", handleCaption);
+    socket.on("participant:joined", handleParticipantJoined);
+    socket.on("meeting:ended", handleMeetingEnded);
+    socket.on("hand:raised", handleHandRaised);
+
+    return () => {
+      socket.off("caption:incoming", handleCaption);
+      socket.off("participant:joined", handleParticipantJoined);
+      socket.off("meeting:ended", handleMeetingEnded);
+      socket.off("hand:raised", handleHandRaised);
+    };
+  }, [socket, navigate]);
+
+  // (Stream Chat is no longer used - chat is handled by Socket.IO)
+
+  const [activeTab, setActiveTab] = useState('notes');
+
+  // Handle speech recognition results
+  useEffect(() => {
+    // Send final transcript as caption
+    if (transcript && transcript !== lastTranscriptRef.current) {
+      sendCaption(sessionId, {
+        text: transcript,
+        language: language,
+        isFinal: true,
+      });
+      lastTranscriptRef.current = transcript;
+      resetTranscript();
+    }
+  }, [transcript, sessionId, language, sendCaption, resetTranscript]);
+
+  // Send interim transcripts (throttled to prevent spam)
+  useEffect(() => {
+    if (interimTranscript && interimTranscript !== lastInterimRef.current) {
+      // Throttle interim captions to every 300ms
+      if (!interimThrottleRef.current) {
+        interimThrottleRef.current = setTimeout(() => {
+          if (interimTranscript) {
+            sendCaption(sessionId, {
+              text: interimTranscript,
+              language: language,
+              isFinal: false,
+            });
+            lastInterimRef.current = interimTranscript;
+          }
+          interimThrottleRef.current = null;
+        }, 300);
+      }
+    }
+
+    return () => {
+      if (interimThrottleRef.current) {
+        clearTimeout(interimThrottleRef.current);
+        interimThrottleRef.current = null;
+      }
+    };
+  }, [interimTranscript, sessionId, language, sendCaption]);
+
+  // Redirect when session ends
   useEffect(() => {
     if (!session || loadingSession) return;
-
     if (session.status === "completed") navigate("/dashboard");
   }, [session, loadingSession, navigate]);
 
-  // update code when problem loads or changes
-  useEffect(() => {
-    if (problemData?.starterCode?.[selectedLanguage]) {
-      setCode(problemData.starterCode[selectedLanguage]);
-    }
-  }, [problemData, selectedLanguage]);
-
-  const handleLanguageChange = (e) => {
-    const newLang = e.target.value;
-    setSelectedLanguage(newLang);
-    // use problem-specific starter code
-    const starterCode = problemData?.starterCode?.[newLang] || "";
-    setCode(starterCode);
-    setOutput(null);
-  };
-
-  const handleRunCode = async () => {
-    setIsRunning(true);
-    setOutput(null);
-
-    const result = await executeCode(selectedLanguage, code);
-    setOutput(result);
-    setIsRunning(false);
-  };
 
   const handleEndSession = () => {
-    if (confirm("Are you sure you want to end this session? All participants will be notified.")) {
-      // this will navigate the HOST to dashboard
-      endSessionMutation.mutate(id, { onSuccess: () => navigate("/dashboard") });
+    // Confirm logic handled by button component
+    console.log("Ending meeting...");
+    try {
+      // End meeting via socket (triggers email sending)
+      endMeeting(sessionId);
+      console.log("Socket event emitted");
+
+      endSessionMutation.mutate(sessionId, {
+        onSuccess: () => {
+          console.log("Mutation success, navigating...");
+          navigate("/dashboard");
+        },
+        onError: (err) => {
+          console.error("Mutation failed:", err);
+        }
+      });
+    } catch (e) {
+      console.error("Critical error in handleEndSession:", e);
     }
   };
 
+  // Loading state
+  if (loadingSession || isInitializingCall) {
+    return (
+      <div className="h-screen bg-base-100 flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <Loader2Icon className="w-12 h-12 mx-auto animate-spin text-primary mb-4" />
+            <p className="text-lg">{t("common.loading")}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Session not found
+  if (!session) {
+    return (
+      <div className="h-screen bg-base-100 flex flex-col">
+        <Navbar />
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <p className="text-lg">{t("common.error")}: Session not found</p>
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="btn btn-primary mt-4"
+            >
+              {t("nav.dashboard")}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen bg-base-100 flex flex-col">
+    <div className="h-screen bg-base-100 flex flex-col overflow-hidden">
       <Navbar />
 
-      <div className="flex-1">
-        <PanelGroup direction="horizontal">
-          {/* LEFT PANEL - CODE EDITOR & PROBLEM DETAILS */}
-          <Panel defaultSize={50} minSize={30}>
-            <PanelGroup direction="vertical">
-              {/* PROBLEM DSC PANEL */}
-              <Panel defaultSize={50} minSize={20}>
-                <div className="h-full overflow-y-auto bg-base-200">
-                  {/* HEADER SECTION */}
-                  <div className="p-6 bg-base-100 border-b border-base-300">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h1 className="text-3xl font-bold text-base-content">
-                          {session?.problem || "Loading..."}
-                        </h1>
-                        {problemData?.category && (
-                          <p className="text-base-content/60 mt-1">{problemData.category}</p>
-                        )}
-                        <p className="text-base-content/60 mt-2">
-                          Host: {session?.host?.name || "Loading..."} •{" "}
-                          {session?.participant ? 2 : 1}/2 participants
-                        </p>
-                      </div>
+      {/* Main Content with Resizable Panels */}
+      <div className="flex-1 overflow-hidden relative">
+        <PanelGroup autoSaveId="session-layout" direction="horizontal">
+          {/* Left Panel - Tabs for Notes / Chat */}
+          <Panel defaultSize={30} minSize={20} className="m-2 glass-panel rounded-2xl overflow-hidden flex flex-col">
+            <div className="flex border-b border-white/10">
+              <button
+                className={`flex-1 p-3 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'notes' ? 'bg-white/10 text-primary border-b-2 border-primary backdrop-blur-md' : 'text-base-content/60 hover:bg-white/5'}`}
+                onClick={() => setActiveTab('notes')}
+              >
+                <MessageSquareIcon className="w-4 h-4" />
+                {t("meeting.notes", "Notes")}
+              </button>
+              <button
+                className={`flex-1 p-3 text-sm font-bold flex items-center justify-center gap-2 transition-all duration-300 ${activeTab === 'chat' ? 'bg-white/10 text-primary border-b-2 border-primary backdrop-blur-md' : 'text-base-content/60 hover:bg-white/5'}`}
+                onClick={() => setActiveTab('chat')}
+              >
+                <MessageSquareIcon className="w-4 h-4" />
+                Chat
+                {/* Badge if unread? (Future) */}
+              </button>
+            </div>
 
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`badge badge-lg ${getDifficultyBadgeClass(
-                            session?.difficulty
-                          )}`}
-                        >
-                          {session?.difficulty.slice(0, 1).toUpperCase() +
-                            session?.difficulty.slice(1) || "Easy"}
-                        </span>
-                        {isHost && session?.status === "active" && (
-                          <button
-                            onClick={handleEndSession}
-                            disabled={endSessionMutation.isPending}
-                            className="btn btn-error btn-sm gap-2"
-                          >
-                            {endSessionMutation.isPending ? (
-                              <Loader2Icon className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <LogOutIcon className="w-4 h-4" />
-                            )}
-                            End Session
-                          </button>
-                        )}
-                        {session?.status === "completed" && (
-                          <span className="badge badge-ghost badge-lg">Completed</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-6 space-y-6">
-                    {/* problem desc */}
-                    {problemData?.description && (
-                      <div className="bg-base-100 rounded-xl shadow-sm p-5 border border-base-300">
-                        <h2 className="text-xl font-bold mb-4 text-base-content">Description</h2>
-                        <div className="space-y-3 text-base leading-relaxed">
-                          <p className="text-base-content/90">{problemData.description.text}</p>
-                          {problemData.description.notes?.map((note, idx) => (
-                            <p key={idx} className="text-base-content/90">
-                              {note}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* examples section */}
-                    {problemData?.examples && problemData.examples.length > 0 && (
-                      <div className="bg-base-100 rounded-xl shadow-sm p-5 border border-base-300">
-                        <h2 className="text-xl font-bold mb-4 text-base-content">Examples</h2>
-
-                        <div className="space-y-4">
-                          {problemData.examples.map((example, idx) => (
-                            <div key={idx}>
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="badge badge-sm">{idx + 1}</span>
-                                <p className="font-semibold text-base-content">Example {idx + 1}</p>
-                              </div>
-                              <div className="bg-base-200 rounded-lg p-4 font-mono text-sm space-y-1.5">
-                                <div className="flex gap-2">
-                                  <span className="text-primary font-bold min-w-[70px]">
-                                    Input:
-                                  </span>
-                                  <span>{example.input}</span>
-                                </div>
-                                <div className="flex gap-2">
-                                  <span className="text-secondary font-bold min-w-[70px]">
-                                    Output:
-                                  </span>
-                                  <span>{example.output}</span>
-                                </div>
-                                {example.explanation && (
-                                  <div className="pt-2 border-t border-base-300 mt-2">
-                                    <span className="text-base-content/60 font-sans text-xs">
-                                      <span className="font-semibold">Explanation:</span>{" "}
-                                      {example.explanation}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Constraints */}
-                    {problemData?.constraints && problemData.constraints.length > 0 && (
-                      <div className="bg-base-100 rounded-xl shadow-sm p-5 border border-base-300">
-                        <h2 className="text-xl font-bold mb-4 text-base-content">Constraints</h2>
-                        <ul className="space-y-2 text-base-content/90">
-                          {problemData.constraints.map((constraint, idx) => (
-                            <li key={idx} className="flex gap-2">
-                              <span className="text-primary">•</span>
-                              <code className="text-sm">{constraint}</code>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Panel>
-
-              <PanelResizeHandle className="h-2 bg-base-300 hover:bg-primary transition-colors cursor-row-resize" />
-
-              <Panel defaultSize={50} minSize={20}>
-                <PanelGroup direction="vertical">
-                  <Panel defaultSize={70} minSize={30}>
-                    <CodeEditorPanel
-                      selectedLanguage={selectedLanguage}
-                      code={code}
-                      isRunning={isRunning}
-                      onLanguageChange={handleLanguageChange}
-                      onCodeChange={(value) => setCode(value)}
-                      onRunCode={handleRunCode}
-                    />
-                  </Panel>
-
-                  <PanelResizeHandle className="h-2 bg-base-300 hover:bg-primary transition-colors cursor-row-resize" />
-
-                  <Panel defaultSize={30} minSize={15}>
-                    <OutputPanel output={output} />
-                  </Panel>
-                </PanelGroup>
-              </Panel>
-            </PanelGroup>
+            <div className="flex-1 overflow-hidden relative">
+              {activeTab === 'notes' ? (
+                <MeetingNotesPanel
+                  meetingId={sessionId}
+                  userId={user?.id}
+                  userLanguage={language}
+                  socket={socket}
+                />
+              ) : (
+                <ChatPanel
+                  meetingId={sessionId}
+                  userId={user?.id}
+                  userName={user?.fullName || user?.name}
+                  userLanguage={language}
+                  socket={socket}
+                />
+              )}
+            </div>
           </Panel>
 
-          <PanelResizeHandle className="w-2 bg-base-300 hover:bg-primary transition-colors cursor-col-resize" />
+          <PanelResizeHandle className="resize-handle group">
+            <div className="w-1 h-8 rounded-full bg-base-content/20 group-hover:bg-primary transition-colors duration-300" />
+          </PanelResizeHandle>
 
-          {/* RIGHT PANEL - VIDEO CALLS & CHAT */}
-          <Panel defaultSize={50} minSize={30}>
-            <div className="h-full bg-base-200 p-4 overflow-auto">
-              {isInitializingCall ? (
-                <div className="h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <Loader2Icon className="w-12 h-12 mx-auto animate-spin text-primary mb-4" />
-                    <p className="text-lg">Connecting to video call...</p>
-                  </div>
-                </div>
-              ) : !streamClient || !call ? (
-                <div className="h-full flex items-center justify-center">
-                  <div className="card bg-base-100 shadow-xl max-w-md">
-                    <div className="card-body items-center text-center">
-                      <div className="w-24 h-24 bg-error/10 rounded-full flex items-center justify-center mb-4">
-                        <PhoneOffIcon className="w-12 h-12 text-error" />
-                      </div>
-                      <h2 className="card-title text-2xl">Connection Failed</h2>
-                      <p className="text-base-content/70">Unable to connect to the video call</p>
+          {/* Right Panel - Video & Controls */}
+          <Panel minSize={30} className="m-2 glass-panel rounded-2xl overflow-hidden flex flex-col">
+            {/* Session Header */}
+            <div className="px-4 py-3 border-b border-white/10 bg-white/5 backdrop-blur-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h1 className="text-lg font-bold text-base-content">
+                    {session.sessionName}
+                  </h1>
+                  <div className="flex items-center gap-3 mt-1">
+                    <div className="flex items-center gap-1 text-xs text-base-content/60">
+                      <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-success shadow-[0_0_10px_theme(colors.success)]' : 'bg-error shadow-[0_0_10px_theme(colors.error)]'}`} />
+                      {isConnected ? "Connected" : "Connecting..."}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs text-base-content/60">
+                      <GlobeIcon className="w-3 h-3" />
+                      {language}
                     </div>
                   </div>
                 </div>
-              ) : (
-                <div className="h-full">
-                  <StreamVideo client={streamClient}>
+
+                <div className="flex items-center gap-2">
+                  {/* Raise Hand Button */}
+                  <button
+                    onClick={() => raiseHand(sessionId)}
+                    className="btn btn-ghost btn-sm btn-circle-corner gap-2 tooltip tooltip-bottom hover:bg-white/10"
+                    data-tip="Raise Hand"
+                  >
+                    <HandIcon className="w-4 h-4 text-warning" />
+                    <span className="hidden xl:inline text-xs">Raise Hand</span>
+                  </button>
+
+                  {/* Language Switcher */}
+                  <div className="dropdown dropdown-end">
+                    <label tabIndex={0} className="btn btn-ghost btn-sm btn-circle-corner gap-2 hover:bg-white/10">
+                      <GlobeIcon className="w-4 h-4" />
+                      {language}
+                    </label>
+                    <ul tabIndex={0} className="dropdown-content z-[2] menu p-2 shadow-xl bg-base-200/90 backdrop-blur-xl rounded-box w-52 border border-white/10">
+                      {availableLanguages.map((lang) => (
+                        <li key={lang.code}>
+                          <button
+                            onClick={() => changeLanguage(lang.code)}
+                            className={language === lang.code ? "active" : ""}
+                          >
+                            {lang.name}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  {/* Share Link */}
+                  <button
+                    className="btn btn-ghost btn-sm btn-circle-corner gap-2 hover:bg-white/10"
+                    onClick={async () => {
+                      try {
+                        const baseUrl = import.meta.env.VITE_CLIENT_URL || window.location.origin;
+                        const cleanBaseUrl = baseUrl.replace(/\/$/, '');
+                        const shareUrl = `${cleanBaseUrl}/session/${sessionId}`;
+
+                        await navigator.clipboard.writeText(shareUrl);
+                        toast.success("Public meeting link copied!", { icon: '🔗', style: { borderRadius: '10px', background: '#333', color: '#fff' } });
+                      } catch (err) {
+                        console.error('Failed to copy link:', err);
+                        toast.error("Failed to copy link.");
+                      }
+                    }}
+                    title="Copy Meeting Link"
+                  >
+                    <UsersIcon className="w-4 h-4" />
+                    <span className="hidden sm:inline">Share</span>
+                  </button>
+
+                  {/* End Session */}
+                  {session.status === "active" && (
+                    <EndMeetingButton
+                      onConfirm={handleEndSession}
+                      isPending={endSessionMutation.isPending}
+                    />
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Video Area */}
+            <div className="flex-1 relative overflow-hidden flex flex-col">
+              {streamClient && call ? (
+                <StreamVideo client={streamClient}>
+                  <StreamTheme className="h-full w-full custom-stream-theme">
                     <StreamCall call={call}>
-                      <VideoCallUI chatClient={chatClient} channel={channel} />
+                      <ActiveMeetingView
+                        sessionId={sessionId}
+                        handleEndSession={handleEndSession}
+                        endSessionMutation={endSessionMutation}
+                        showCaptions={showCaptions}
+                        setShowCaptions={setShowCaptions}
+                        captions={captions}
+                        language={language}
+                        isListening={isListening}
+                        startListening={startListening}
+                        stopListening={stopListening}
+                      />
                     </StreamCall>
-                  </StreamVideo>
+                  </StreamTheme>
+                </StreamVideo>
+              ) : (
+                <div className="h-full flex items-center justify-center bg-base-300/30 backdrop-blur-sm">
+                  <div className="text-center">
+                    <Loader2Icon className="w-8 h-8 mx-auto animate-spin text-primary mb-2" />
+                    <p>Connecting to video call...</p>
+                  </div>
                 </div>
               )}
             </div>
@@ -290,6 +464,185 @@ function SessionPage() {
         </PanelGroup>
       </div>
     </div>
+  );
+}
+
+function ActiveMeetingView({
+  sessionId,
+  handleEndSession,
+  endSessionMutation,
+  showCaptions,
+  setShowCaptions,
+  captions,
+  language,
+  isListening,
+  startListening,
+  stopListening
+}) {
+  const { useCameraState, useMicrophoneState } = useCallStateHooks();
+  const { camera, isMute: isCamMuted } = useCameraState();
+  const { microphone, isMute: isMicMuted } = useMicrophoneState();
+
+  const isCamOn = !isCamMuted;
+  const isMicOn = !isMicMuted;
+
+  const toggleCamera = async () => {
+    try {
+      await camera?.toggle();
+    } catch (err) {
+      console.error("Error toggling camera:", err);
+    }
+  };
+
+  const toggleMic = async () => {
+    try {
+      await microphone?.toggle();
+      if (microphone?.isMute) {
+        stopListening();
+      } else {
+        startListening();
+      }
+    } catch (err) {
+      console.error("Error toggling microphone:", err);
+    }
+  };
+
+  return (
+    <div className="h-full flex flex-col bg-[#202124] relative">
+      {/* Video Grid Area */}
+      <div className="flex-1 relative overflow-hidden flex items-center justify-center p-4">
+        <SpeakerLayout />
+
+        {/* Live Captions Overlay */}
+        {showCaptions && (
+          <div className="absolute bottom-4 left-4 right-4 z-10 pointer-events-none">
+            <CaptionOverlay
+              captions={captions}
+              userLanguage={language}
+              isSpeaking={isListening}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Google Meet Style Bottom Bar */}
+      <div className="h-20 bg-[#202124] flex items-center justify-between px-6 shrink-0 z-20">
+        <div className="hidden md:flex items-center text-white/90 text-sm font-medium">
+          <span>{new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+          <div className="w-px h-4 bg-white/20 mx-4" />
+          <span>{sessionId}</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleMic}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${!isMicOn ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg' : 'bg-[#3c4043] hover:bg-[#474a4d] text-white border border-gray-600'}`}
+            title={isMicOn ? "Turn off microphone" : "Turn on microphone"}
+          >
+            {!isMicOn ? <MicOffIcon className="w-5 h-5" /> : <MicIcon className="w-5 h-5" />}
+          </button>
+
+          <button
+            onClick={toggleCamera}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${!isCamOn ? 'bg-red-500 hover:bg-red-600 text-white shadow-lg' : 'bg-[#3c4043] hover:bg-[#474a4d] text-white border border-gray-600'}`}
+            title={isCamOn ? "Turn off camera" : "Turn on camera"}
+          >
+            {!isCamOn ? <VideoOffIcon className="w-5 h-5" /> : <VideoIcon className="w-5 h-5" />}
+          </button>
+
+          <button
+            onClick={() => setShowCaptions(!showCaptions)}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${showCaptions ? 'bg-blue-300 text-gray-900' : 'bg-[#3c4043] hover:bg-[#474a4d] text-white border border-gray-600'}`}
+            title="Toggle captions"
+          >
+            <MessageSquareIcon className="w-5 h-5" />
+          </button>
+
+          <button
+            className="w-12 h-12 rounded-full flex items-center justify-center bg-[#3c4043] hover:bg-[#474a4d] text-white border border-gray-600 transition-all duration-200"
+            title="Present screen (Not fully implemented)"
+          >
+            <MonitorUp className="w-5 h-5" />
+          </button>
+
+          <div className="ml-2">
+            <EndMeetingButton
+              onConfirm={handleEndSession}
+              isPending={endSessionMutation.isPending}
+              customStyle="w-16 h-10 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center text-white"
+              iconOnly={true}
+            />
+          </div>
+        </div>
+
+        <div className="hidden md:flex items-center justify-end w-[120px]">
+          <button className="p-3 hover:bg-[#3c4043] rounded-full text-white/90">
+            <UsersIcon className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EndMeetingButton({ onConfirm, isPending, customStyle }) {
+  const { t } = useTranslation();
+  const [confirming, setConfirming] = useState(false);
+
+  useEffect(() => {
+    if (confirming) {
+      const timer = setTimeout(() => setConfirming(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [confirming]);
+
+  if (customStyle) {
+    if (confirming) {
+      return (
+        <button
+          onClick={onConfirm}
+          disabled={isPending}
+          className={customStyle}
+          title="Confirm End Call"
+        >
+          {isPending ? <Loader2Icon className="w-5 h-5 animate-spin" /> : <LogOutIcon className="w-5 h-5" />}
+        </button>
+      );
+    }
+    return (
+      <button
+        onClick={() => setConfirming(true)}
+        disabled={isPending}
+        className={customStyle}
+        title="Leave Call"
+      >
+        <PhoneOff className="w-5 h-5" />
+      </button>
+    );
+  }
+
+  if (confirming) {
+    return (
+      <button
+        onClick={onConfirm}
+        disabled={isPending}
+        className="btn btn-error btn-sm gap-2 animate-pulse font-bold"
+      >
+        {isPending ? <Loader2Icon className="w-4 h-4 animate-spin" /> : <LogOutIcon className="w-4 h-4" />}
+        {t("meeting.confirmEnd", "Click to Confirm")}
+      </button>
+    );
+  }
+
+  return (
+    <button
+      onClick={() => setConfirming(true)}
+      disabled={isPending}
+      className="btn btn-error btn-sm gap-2"
+    >
+      <LogOutIcon className="w-4 h-4" />
+      {t("meeting.endMeeting")}
+    </button>
   );
 }
 

@@ -1,5 +1,4 @@
 import { Code2Icon, LoaderIcon, PlusIcon } from "lucide-react";
-import { PROBLEMS } from "../data/problems";
 
 function CreateSessionModal({
   isOpen,
@@ -9,8 +8,6 @@ function CreateSessionModal({
   onCreateRoom,
   isCreating,
 }) {
-  const problems = Object.values(PROBLEMS);
-
   if (!isOpen) return null;
 
   return (
@@ -19,44 +16,35 @@ function CreateSessionModal({
         <h3 className="font-bold text-2xl mb-6">Create New Session</h3>
 
         <div className="space-y-8">
-          {/* PROBLEM SELECTION */}
+          {/* SESSION NAME INPUT */}
           <div className="space-y-2">
             <label className="label">
-              <span className="label-text font-semibold">Select Problem</span>
+              <span className="label-text font-semibold">Session Name</span>
               <span className="label-text-alt text-error">*</span>
             </label>
 
-            <select
-              className="select w-full"
-              value={roomConfig.problem}
+            <input
+              type="text"
+              placeholder="Enter session name (e.g., Team Standup, Code Review)"
+              className="input input-bordered w-full"
+              value={roomConfig.sessionName || ""}
               onChange={(e) => {
-                const selectedProblem = problems.find((p) => p.title === e.target.value);
                 setRoomConfig({
-                  difficulty: selectedProblem.difficulty,
-                  problem: e.target.value,
+                  ...roomConfig,
+                  sessionName: e.target.value,
                 });
               }}
-            >
-              <option value="" disabled>
-                Choose a coding problem...
-              </option>
-
-              {problems.map((problem) => (
-                <option key={problem.id} value={problem.title}>
-                  {problem.title} ({problem.difficulty})
-                </option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* ROOM SUMMARY */}
-          {roomConfig.problem && (
+          {roomConfig.sessionName && (
             <div className="alert alert-success">
               <Code2Icon className="size-5" />
               <div>
                 <p className="font-semibold">Room Summary:</p>
                 <p>
-                  Problem: <span className="font-medium">{roomConfig.problem}</span>
+                  Session: <span className="font-medium">{roomConfig.sessionName}</span>
                 </p>
                 <p>
                   Max Participants: <span className="font-medium">2 (1-on-1 session)</span>
@@ -74,7 +62,7 @@ function CreateSessionModal({
           <button
             className="btn btn-primary gap-2"
             onClick={onCreateRoom}
-            disabled={isCreating || !roomConfig.problem}
+            disabled={isCreating || !roomConfig.sessionName}
           >
             {isCreating ? (
               <LoaderIcon className="size-5 animate-spin" />

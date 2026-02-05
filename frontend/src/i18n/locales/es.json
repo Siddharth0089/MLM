@@ -1,0 +1,79 @@
+{
+    "nav": {
+        "dashboard": "Panel",
+        "tagline": "Reuniones sin fronteras",
+        "signOut": "Cerrar sesión"
+    },
+    "meeting": {
+        "title": "Reunión",
+        "notes": "Notas de reunión",
+        "captions": "Subtítulos en vivo",
+        "participants": "participantes",
+        "endMeeting": "Finalizar reunión",
+        "endMeetingConfirm": "¿Está seguro de que desea finalizar esta reunión? Las notas se enviarán por correo electrónico a todos los participantes.",
+        "host": "Anfitrión",
+        "joinedAt": "Se unió a las",
+        "settings": "Configuración",
+        "enableTranslation": "Habilitar traducción automática",
+        "enableCaptions": "Habilitar subtítulos en vivo",
+        "showOriginal": "Mostrar original",
+        "syncing": "Sincronizando...",
+        "saved": "Guardado",
+        "translating": "Traduciendo automáticamente a"
+    },
+    "dashboard": {
+        "title": "Panel",
+        "createMeeting": "Nueva reunión",
+        "activeMeetings": "Reuniones activas",
+        "recentMeetings": "Reuniones recientes",
+        "noMeetings": "No se encontraron reuniones",
+        "joinMeeting": "Unirse",
+        "welcome": "Bienvenido",
+        "stats": {
+            "totalMeetings": "Total de reuniones",
+            "activeMeetings": "Activas",
+            "completedMeetings": "Completadas"
+        }
+    },
+    "settings": {
+        "language": "Idioma",
+        "selectLanguage": "Seleccione su idioma preferido",
+        "autoTranslate": "Traducir automáticamente las notas de reunión",
+        "showCaptions": "Mostrar subtítulos durante las reuniones"
+    },
+    "common": {
+        "loading": "Cargando...",
+        "error": "Error",
+        "success": "Éxito",
+        "save": "Guardar",
+        "cancel": "Cancelar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "create": "Crear",
+        "search": "Buscar",
+        "close": "Cerrar"
+    },
+    "caption": {
+        "speaking": "Hablando",
+        "interim": "(escuchando...)",
+        "noTranscript": "Haga clic en el micrófono para activar los subtítulos"
+    },
+    "email": {
+        "minutesSent": "Notas de reunión enviadas a todos los participantes",
+        "sendingMinutes": "Enviando notas de reunión..."
+    },
+    "home": {
+        "title": "Meetio",
+        "subtitle": "Rompa las barreras del idioma en sus reuniones",
+        "description": "Traducción en tiempo real para notas y subtítulos. Todos escuchan y leen en su propio idioma.",
+        "getStarted": "Comenzar",
+        "features": {
+            "translation": "Traducción en tiempo real",
+            "translationDesc": "Notas y subtítulos traducidos al instante",
+            "captions": "Subtítulos en vivo",
+            "captionsDesc": "Voz a texto automático en todos los idiomas",
+            "email": "Notas de reunión",
+            "emailDesc": "Resúmenes enviados en el idioma de cada usuario"
+        }
+    }
+}

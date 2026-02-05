@@ -2,24 +2,23 @@ import mongoose from "mongoose";
 
 const sessionSchema = new mongoose.Schema(
   {
+    sessionName: {
+      type: String,
+      required: false, // Made optional as controller expects problem/difficulty
+    },
     problem: {
       type: String,
-      required: true,
     },
     difficulty: {
       type: String,
-      enum: ["easy", "medium", "hard"],
-      required: true,
     },
     host: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
     },
     participant: {
-      type: mongoose.Schema.Types.ObjectId,
+      type: mongoose.Schema.Types.ObjectId, // Singular, matching controller logic
       ref: "User",
-      default: null,
     },
     status: {
       type: String,
@@ -29,7 +28,7 @@ const sessionSchema = new mongoose.Schema(
     // stream video call ID
     callId: {
       type: String,
-      default: "",
+      required: true,
     },
   },
   { timestamps: true }

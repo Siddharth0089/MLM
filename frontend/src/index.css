@@ -1,12 +1,40 @@
 @import "tailwindcss";
+
 @plugin "daisyui" {
   themes: all;
 }
 
 /* Add cursor pointer to buttons by default - this is coming from tailwind docs */
 @layer base {
+
   button:not(:disabled),
   [role="button"]:not(:disabled) {
     cursor: pointer;
+  }
+}
+
+@layer components {
+
+  /* Glassmorphism Utility */
+  .glass-panel {
+    @apply bg-base-100/60 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+
+  .glass-panel-dark {
+    @apply bg-black/40 backdrop-blur-xl border border-white/10 shadow-xl;
+  }
+
+  /* Enhanced Button Styles */
+  .btn {
+    @apply rounded-full font-medium transition-all duration-300 hover:scale-105 active:scale-95 px-6;
+  }
+
+  .btn-sm {
+    @apply px-4;
+  }
+
+  /* Seamless Resizable Handle */
+  .resize-handle {
+    @apply w-3 -ml-1.5 z-10 hover:bg-white/5 transition-colors duration-200 cursor-col-resize flex items-center justify-center;
   }
 }

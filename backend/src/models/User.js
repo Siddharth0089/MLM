@@ -17,8 +17,16 @@ const userSchema = new mongoose.Schema(
     },
     clerkId: {
       type: String,
-      required: true,
       unique: true,
+      sparse: true, // Allows null/undefined to be unique
+    },
+    preferredLanguage: {
+      type: String,
+      default: "en-US",
+    },
+    settings: {
+      autoTranslate: { type: Boolean, default: true },
+      showCaptions: { type: Boolean, default: true },
     },
   },
   { timestamps: true } // createdAt, updatedAt

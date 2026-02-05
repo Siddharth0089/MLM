@@ -1,0 +1,79 @@
+{
+    "nav": {
+        "dashboard": "Tableau de bord",
+        "tagline": "Réunions sans frontières",
+        "signOut": "Déconnexion"
+    },
+    "meeting": {
+        "title": "Réunion",
+        "notes": "Notes de réunion",
+        "captions": "Sous-titres en direct",
+        "participants": "participants",
+        "endMeeting": "Terminer la réunion",
+        "endMeetingConfirm": "Êtes-vous sûr de vouloir terminer cette réunion ? Les notes seront envoyées par e-mail à tous les participants.",
+        "host": "Hôte",
+        "joinedAt": "Rejoint à",
+        "settings": "Paramètres",
+        "enableTranslation": "Activer la traduction automatique",
+        "enableCaptions": "Activer les sous-titres en direct",
+        "showOriginal": "Afficher l'original",
+        "syncing": "Synchronisation...",
+        "saved": "Enregistré",
+        "translating": "Traduction automatique vers"
+    },
+    "dashboard": {
+        "title": "Tableau de bord",
+        "createMeeting": "Nouvelle réunion",
+        "activeMeetings": "Réunions actives",
+        "recentMeetings": "Réunions récentes",
+        "noMeetings": "Aucune réunion trouvée",
+        "joinMeeting": "Rejoindre",
+        "welcome": "Bienvenue",
+        "stats": {
+            "totalMeetings": "Total des réunions",
+            "activeMeetings": "Actives",
+            "completedMeetings": "Terminées"
+        }
+    },
+    "settings": {
+        "language": "Langue",
+        "selectLanguage": "Sélectionnez votre langue préférée",
+        "autoTranslate": "Traduire automatiquement les notes de réunion",
+        "showCaptions": "Afficher les sous-titres pendant les réunions"
+    },
+    "common": {
+        "loading": "Chargement...",
+        "error": "Erreur",
+        "success": "Succès",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "delete": "Supprimer",
+        "edit": "Modifier",
+        "create": "Créer",
+        "search": "Rechercher",
+        "close": "Fermer"
+    },
+    "caption": {
+        "speaking": "Parle",
+        "interim": "(écoute...)",
+        "noTranscript": "Cliquez sur le micro pour activer les sous-titres"
+    },
+    "email": {
+        "minutesSent": "Notes de réunion envoyées à tous les participants",
+        "sendingMinutes": "Envoi des notes de réunion..."
+    },
+    "home": {
+        "title": "Meetio",
+        "subtitle": "Brisez les barrières linguistiques dans vos réunions",
+        "description": "Traduction en temps réel des notes et sous-titres. Chacun entend et lit dans sa propre langue.",
+        "getStarted": "Commencer",
+        "features": {
+            "translation": "Traduction en temps réel",
+            "translationDesc": "Notes et sous-titres traduits instantanément",
+            "captions": "Sous-titres en direct",
+            "captionsDesc": "Reconnaissance vocale automatique dans toutes les langues",
+            "email": "Notes de réunion",
+            "emailDesc": "Résumés envoyés dans la langue de chaque participant"
+        }
+    }
+}

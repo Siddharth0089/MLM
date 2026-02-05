@@ -2,17 +2,19 @@ import {
   CallControls,
   CallingState,
   SpeakerLayout,
+  StreamTheme,
   useCallStateHooks,
 } from "@stream-io/video-react-sdk";
 import { Loader2Icon, MessageSquareIcon, UsersIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router";
 import { Channel, Chat, MessageInput, MessageList, Thread, Window } from "stream-chat-react";
+import CaptionOverlay from "./meeting/CaptionOverlay";
 
 import "@stream-io/video-react-sdk/dist/css/styles.css";
 import "stream-chat-react/dist/css/v2/index.css";
 
-function VideoCallUI({ chatClient, channel }) {
+function VideoCallUI({ chatClient, channel, captions = [], userLanguage = "en-US" }) {
   const navigate = useNavigate();
   const { useCallCallingState, useParticipantCount } = useCallStateHooks();
   const callingState = useCallCallingState();
@@ -31,7 +33,7 @@ function VideoCallUI({ chatClient, channel }) {
   }
 
   return (
-    <div className="h-full flex gap-3 relative str-video">
+    <StreamTheme className="h-full flex gap-3 relative str-video">
       <div className="flex-1 flex flex-col gap-3">
         {/* Participants count badge and Chat Toggle */}
         <div className="flex items-center justify-between gap-2 bg-base-100 p-3 rounded-lg shadow">
@@ -48,56 +50,56 @@ function VideoCallUI({ chatClient, channel }) {
               title={isChatOpen ? "Hide chat" : "Show chat"}
             >
               <MessageSquareIcon className="size-4" />
-              Chat
+              <span className="hidden sm:inline">{isChatOpen ? "Hide chat" : "Show chat"}</span>
             </button>
           )}
         </div>
 
+        {/* Video layout with caption overlay */}
         <div className="flex-1 bg-base-300 rounded-lg overflow-hidden relative">
           <SpeakerLayout />
+
+          {/* Caption Overlay - positioned at bottom of video */}
+          {captions.length > 0 && (
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 w-11/12 max-w-3xl z-10">
+              <CaptionOverlay captions={captions} userLanguage={userLanguage} />
+            </div>
+          )}
         </div>
 
-        <div className="bg-base-100 p-3 rounded-lg shadow flex justify-center">
+        {/* Call controls */}
+        <div className="bg-base-100 p-3 rounded-lg">
           <CallControls onLeave={() => navigate("/dashboard")} />
         </div>
       </div>
 
-      {/* CHAT SECTION */}
+      {/* Chat sidebar */}
+      {chatClient && channel && isChatOpen && (
+        <div className="w-96 bg-base-100 rounded-lg shadow-lg relative">
+          <button
+            onClick={() => setIsChatOpen(false)}
+            className="absolute top-2 right-2 z-10 btn btn-ghost btn-sm btn-circle"
+          >
+            <XIcon className="size-4" />
+          </button>
 
-      {chatClient && channel && (
-        <div
-          className={`flex flex-col rounded-lg shadow overflow-hidden bg-[#272a30] transition-all duration-300 ease-in-out ${
-            isChatOpen ? "w-80 opacity-100" : "w-0 opacity-0"
-          }`}
-        >
-          {isChatOpen && (
-            <>
-              <div className="bg-[#1c1e22] p-3 border-b border-[#3a3d44] flex items-center justify-between">
-                <h3 className="font-semibold text-white">Session Chat</h3>
-                <button
-                  onClick={() => setIsChatOpen(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
-                  title="Close chat"
-                >
-                  <XIcon className="size-5" />
-                </button>
-              </div>
-              <div className="flex-1 overflow-hidden stream-chat-dark">
-                <Chat client={chatClient} theme="str-chat__theme-dark">
-                  <Channel channel={channel}>
-                    <Window>
-                      <MessageList />
-                      <MessageInput />
-                    </Window>
-                    <Thread />
-                  </Channel>
-                </Chat>
-              </div>
-            </>
-          )}
+          <Chat client={chatClient} theme="str-chat__theme-light">
+            <Channel channel={channel}>
+              <Window>
+                <div className="h-full flex flex-col">
+                  <div className="flex-1 overflow-auto">
+                    <MessageList />
+                  </div>
+                  <MessageInput />
+                </div>
+              </Window>
+              <Thread />
+            </Channel>
+          </Chat>
         </div>
       )}
-    </div>
+    </StreamTheme>
   );
 }
+
 export default VideoCallUI;

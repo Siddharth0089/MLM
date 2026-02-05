@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router";
-// import { useUser } from "@clerk/clerk-react";
 import { useState } from "react";
 import { useActiveSessions, useCreateSession, useMyRecentSessions } from "../hooks/useSessions";
 
@@ -12,9 +11,8 @@ import CreateSessionModal from "../components/CreateSessionModal";
 
 function DashboardPage() {
   const navigate = useNavigate();
-  // const { user } = useUser();
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [roomConfig, setRoomConfig] = useState({ problem: "", difficulty: "" });
+  const [roomConfig, setRoomConfig] = useState({ sessionName: "" });
 
   const createSessionMutation = useCreateSession();
 
@@ -22,12 +20,11 @@ function DashboardPage() {
   const { data: recentSessionsData, isLoading: loadingRecentSessions } = useMyRecentSessions();
 
   const handleCreateRoom = () => {
-    if (!roomConfig.problem || !roomConfig.difficulty) return;
+    if (!roomConfig.sessionName) return;
 
     createSessionMutation.mutate(
       {
-        problem: roomConfig.problem,
-        difficulty: roomConfig.difficulty.toLowerCase(),
+        sessionName: roomConfig.sessionName,
       },
       {
         onSuccess: (data) => {
@@ -41,15 +38,9 @@ function DashboardPage() {
   const activeSessions = activeSessionsData?.sessions || [];
   const recentSessions = recentSessionsData?.sessions || [];
 
-  // const isUserInSession = (session) => {
-  //   if (!user.id) return false;
-
-  //   return session.host?.clerkId === user.id || session.participant?.clerkId === user.id;
-  // };
-
   return (
     <>
-      <div className="min-h-screen bg-base-300">
+      <div className="min-h-screen bg-gradient-to-br from-base-300 via-base-100 to-primary/10">
         <Navbar />
         <WelcomeSection onCreateSession={() => setShowCreateModal(true)} />
 
@@ -63,7 +54,6 @@ function DashboardPage() {
             <ActiveSessions
               sessions={activeSessions}
               isLoading={loadingActiveSessions}
-              isUserInSession={isUserInSession}
             />
           </div>
 
