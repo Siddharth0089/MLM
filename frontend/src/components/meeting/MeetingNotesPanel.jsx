@@ -44,7 +44,6 @@ function MeetingNotesPanel({
     const [isLocked, setIsLocked] = useState(false);
 
     // Initialize Quill editor
-    // Initialize Quill editor
     useEffect(() => {
         if (!editorRef.current || quillRef.current) return;
 
@@ -59,6 +58,26 @@ function MeetingNotesPanel({
         });
 
         quillRef.current = quill;
+
+        // FETCH INITIAL NOTES
+        if (socket && meetingId && userLanguage) {
+            socket.emit("note:get", { meetingId, language: userLanguage });
+        }
+
+        const handleInitialNote = (data) => {
+            if (quillRef.current) {
+                const currentText = quillRef.current.getText().trim();
+                // Only overwrite if empty to avoid overwriting user input race condition
+                if (currentText.length === 0 && data.html) {
+                    // Use clipboard dangerouslyPasteHTML for HTML content
+                    quillRef.current.clipboard.dangerouslyPasteHTML(0, data.html);
+                }
+            }
+        };
+
+        if (socket) {
+            socket.on("note:initial", handleInitialNote);
+        }
 
         // Track focus state
         quill.root.addEventListener('focus', () => {

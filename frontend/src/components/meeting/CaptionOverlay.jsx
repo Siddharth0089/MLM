@@ -10,56 +10,37 @@ const LANGUAGE_NAMES = {
 const getLanguageName = (code) => LANGUAGE_NAMES[code] || code?.slice(0, 2)?.toUpperCase() || '';
 
 /**
- * Google Meet-style caption overlay
- * - No background box
+ * Google Meet-style caption overlay - OPTIMIZED FOR VISIBILITY
+ * - Larger text with high contrast
+ * - Smooth fade animations
  * - Maximum 2 lines displayed
- * - Old text scrolls away as new text arrives
  */
 function CaptionOverlay({ captions = [], userLanguage }) {
     const containerRef = useRef(null);
+    const [showOverlay, setShowOverlay] = useState(false);
 
     // Process captions into display format
     const displayCaptions = useMemo(() => {
-        // Take only last few captions
         const recentCaptions = captions.slice(-5);
-
         return recentCaptions.map((caption) => {
-            let displayText = caption.originalText;
-            let wasTranslated = false;
-
-            // Find translation for user's language
-            if (caption.originalLanguage !== userLanguage && caption.translations) {
-                const translation = caption.translations.find(
-                    (tr) => tr.language === userLanguage
-                );
-                if (translation) {
-                    displayText = translation.text;
-                    wasTranslated = true;
-                }
-            }
-
+            const displayText = caption.text || caption.originalText;
+            const wasTranslated = caption.isTranslated || (caption.text !== caption.originalText);
             return {
                 id: caption.utteranceId || caption._id || caption.id || `${caption.speakerUserId}-${caption.timestamp}`,
                 speakerName: caption.speakerName || "Participant",
                 text: displayText,
                 isFinal: caption.isFinal,
                 isTranslated: wasTranslated,
-                originalLang: getLanguageName(caption.originalLanguage),
+                originalLang: getLanguageName(caption.language),
             };
         });
     }, [captions, userLanguage]);
 
-    const [showOverlay, setShowOverlay] = useState(false);
-
-    // Auto-hide timer
+    // Show immediately when captions arrive, hide after inactivity
     useEffect(() => {
         if (captions.length > 0) {
-            console.log("[DEBUG] CaptionOverlay received captions:", captions.length, captions[captions.length - 1]);
             setShowOverlay(true);
-            const timer = setTimeout(() => {
-                // setShowOverlay(false); // DEBUG: Keep overlay visible
-                console.log("[DEBUG] CaptionOverlay auto-hide trigger (IGNORED)");
-            }, 5000); // Hide after 5 seconds of no new captions
+            const timer = setTimeout(() => setShowOverlay(false), 10000); // 10 second timeout
             return () => clearTimeout(timer);
         }
     }, [captions]);
@@ -71,43 +52,45 @@ function CaptionOverlay({ captions = [], userLanguage }) {
         }
     }, [displayCaptions]);
 
-    if (displayCaptions.length === 0 || !showOverlay) {
-        return null;
-    }
-
+    // Always render container, control visibility with opacity
     return (
         <div
             ref={containerRef}
-            className="w-full flex flex-col items-center pointer-events-none transition-opacity duration-500 ease-in-out"
-            style={{
-                maxHeight: '80px',
-                overflow: 'hidden',
-                opacity: showOverlay ? 1 : 0
-            }}
+            className={`w-full max-w-4xl mx-auto flex flex-col items-center gap-2 pointer-events-none transition-all duration-300 ease-in-out ${showOverlay && displayCaptions.length > 0 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4'
+                }`}
+            style={{ maxHeight: '120px', overflow: 'hidden' }}
         >
-            {/* Show only the last 2 caption entries for 2-line effect */}
-            {displayCaptions.slice(-2).map((caption) => (
+            {displayCaptions.slice(-2).map((caption, index) => (
                 <div
                     key={caption.id}
-                    className="text-center px-4 py-2 max-w-3xl bg-black/40 backdrop-blur-sm rounded-lg"
+                    className={`
+                        w-fit max-w-full px-6 py-3 rounded-xl
+                        bg-black/80 backdrop-blur-md
+                        shadow-[0_4px_30px_rgba(0,0,0,0.5)]
+                        transform transition-all duration-300 ease-out
+                        ${index === displayCaptions.slice(-2).length - 1 ? 'scale-100' : 'scale-95 opacity-70'}
+                    `}
                 >
-                    <span
-                        className={`text-base leading-relaxed ${caption.isFinal ? 'text-white' : 'text-white/70 italic'
-                            }`}
-                        style={{
-                            textShadow: '0 1px 4px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5)',
-                        }}
-                    >
-                        <span className="text-white/60 text-sm mr-2">
+                    <p className="text-center">
+                        <span className="text-blue-400 font-semibold text-sm mr-2 tracking-wide">
                             {caption.speakerName}:
                         </span>
-                        {caption.text}
+                        <span
+                            className={`text-lg font-medium leading-relaxed ${caption.isFinal ? 'text-white' : 'text-white/80 italic'
+                                }`}
+                            style={{
+                                textShadow: '0 2px 8px rgba(0,0,0,0.9)',
+                                letterSpacing: '0.02em'
+                            }}
+                        >
+                            {caption.text}
+                        </span>
                         {caption.isTranslated && (
-                            <span className="ml-2 text-xs text-amber-400/80">
+                            <span className="ml-2 text-xs text-amber-400 font-medium">
                                 ({caption.originalLang})
                             </span>
                         )}
-                    </span>
+                    </p>
                 </div>
             ))}
         </div>
@@ -115,3 +98,4 @@ function CaptionOverlay({ captions = [], userLanguage }) {
 }
 
 export default CaptionOverlay;
+

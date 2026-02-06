@@ -5,14 +5,13 @@ import { useTranslation } from "react-i18next";
 import { useEndSession, useSessionById } from "../hooks/useSessions";
 import { useSocket } from "../hooks/useSocket";
 import { useLanguage } from "../hooks/useLanguage";
-import { useSpeechRecognition } from "../hooks/useSpeechRecognition";
+import { useRealTimeTranslations } from "../hooks/useRealTimeTranslations";
 import useStreamClient from "../hooks/useStreamClient";
 import Navbar from "../components/Navbar";
 import MeetingNotesPanel from "../components/meeting/MeetingNotesPanel";
 import CaptionOverlay from "../components/meeting/CaptionOverlay";
 import LanguageSwitcher from "../components/LanguageSwitcher";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
-
 // Stream.io Video SDK
 import {
   StreamVideo,
@@ -71,20 +70,27 @@ function SessionPage() {
     name: "Guest"
   });
   const effectiveUser = user || guestUserRef.current;
-
-  // Socket connection (Use corrected user properties)
   const {
     socket,
     isConnected,
     joinMeeting,
-    sendCaption,
+    sendCaption, // Legacy, can be ignored or removed
     endMeeting,
     raiseHand,
     updateLanguage
   } = useSocket(effectiveUser?.id, effectiveUser?.fullName || effectiveUser?.name);
 
-  // Speech recognition for live captions
-  const { startListening, stopListening, isListening, captions, transcript, resetTranscript, interimTranscript, error: speechError, simulateCaption } = useSpeechRecognition(socket, sessionId, effectiveUser?.fullName || effectiveUser?.name || "Participant", language, effectiveUser?.id);
+  // NEW: Real-time Translations Hook
+  const {
+    startListening,
+    stopListening,
+    isListening,
+    captions,
+    // transcript, interimTranscript removed/merged into captions
+    resetTranscript,
+    error: speechError,
+    simulateCaption
+  } = useRealTimeTranslations(socket, sessionId, effectiveUser?.fullName || effectiveUser?.name || "Participant", language, effectiveUser?.id);
 
   const [showCaptions, setShowCaptions] = useState(true);
   const [participants, setParticipants] = useState([]);
@@ -110,7 +116,9 @@ function SessionPage() {
       prevLanguageRef.current = language;
       console.log(`Language updated to: ${language}`);
     }
-  }, [socket, isConnected, sessionId, language, updateLanguage]);
+    // Debug: Expose for diagnostics
+    window.debugContext = { simulateCaption, socket, forceEmit: (text) => socket.emit("speech:monitor", { meetingId: sessionId, text, isFinal: true, language }) };
+  }, [socket, isConnected, sessionId, language, updateLanguage, simulateCaption]);
 
   // Socket event handlers
   useEffect(() => {
@@ -252,14 +260,15 @@ function SessionPage() {
             </div>
 
             <div className="flex-1 overflow-hidden relative">
-              {activeTab === 'notes' ? (
+              <div className={`absolute inset-0 flex flex-col ${activeTab === 'notes' ? 'z-10' : 'z-0 invisible'}`}>
                 <MeetingNotesPanel
                   meetingId={sessionId}
                   userId={user?.id}
                   userLanguage={language}
                   socket={socket}
                 />
-              ) : (
+              </div>
+              <div className={`absolute inset-0 flex flex-col ${activeTab === 'chat' ? 'z-10' : 'z-0 invisible'}`}>
                 <ChatPanel
                   meetingId={sessionId}
                   userId={user?.id}
@@ -267,7 +276,7 @@ function SessionPage() {
                   userLanguage={language}
                   socket={socket}
                 />
-              )}
+              </div>
             </div>
           </Panel>
 
@@ -378,7 +387,7 @@ function SessionPage() {
                         startListening={startListening}
                         stopListening={stopListening}
                         speechError={speechError}
-                        interimTranscript={interimTranscript}
+
                       />
                     </StreamCall>
                   </StreamTheme>
@@ -410,8 +419,7 @@ function ActiveMeetingView({
   isListening,
   startListening,
   stopListening,
-  speechError,
-  interimTranscript
+  speechError
 }) {
   const { useCameraState, useMicrophoneState, useScreenShareState, useParticipantCount } = useCallStateHooks();
   const { camera, isMute: isCamMuted } = useCameraState();
@@ -545,21 +553,12 @@ function ActiveMeetingView({
           <SpeakerLayout />
         </div>
 
-        {/* Live Captions Overlay */}
+        {/* Live Captions Overlay - Positioned above bottom bar */}
         {showCaptions && (
-          <div className="absolute bottom-4 left-0 right-0 z-[9999] pointer-events-none flex justify-center">
+          <div className="absolute bottom-24 left-0 right-0 z-[9999] pointer-events-none flex justify-center px-4">
             <CaptionOverlay
-              captions={interimTranscript ? [...captions, {
-                id: 'interim-' + Date.now(),
-                speakerUserId: effectiveUser?.id,
-                speakerName: effectiveUser?.fullName || effectiveUser?.name || "You",
-                originalText: interimTranscript,
-                isFinal: false,
-                originalLanguage: language,
-                timestamp: new Date()
-              }] : captions}
+              captions={captions}
               userLanguage={language}
-              isSpeaking={isListening}
             />
           </div>
         )}

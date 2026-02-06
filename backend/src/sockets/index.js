@@ -103,6 +103,23 @@ export function initializeSocketServer(httpServer) {
             }
         });
 
+        // Get initial note (for new joiners or page refresh)
+        socket.on("note:get", async (data) => {
+            const { meetingId, language } = data;
+            try {
+                const noteData = await notesService.getNoteWithTranslation(meetingId, language);
+                if (noteData) {
+                    socket.emit("note:initial", {
+                        text: noteData.content,
+                        html: noteData.contentHTML,
+                        language: noteData.language
+                    });
+                }
+            } catch (error) {
+                console.error("Error fetching note:", error);
+            }
+        });
+
         // Yjs binary update for CRDT sync (more efficient than sending full content)
         socket.on("note:yjs-sync", (data) => {
             const { meetingId, update } = data;
@@ -250,84 +267,72 @@ export function initializeSocketServer(httpServer) {
             console.log(`Received audio chunk from ${speakerUserId} in meeting ${meetingId}`);
         });
 
-        // Caption event (if using client-side STT or sending pre-transcribed text)
-        socket.on("caption:send", async (data) => {
-            const { meetingId, speakerUserId, speakerName, text, language, isFinal, utteranceId } = data;
-            console.log(`[DEBUG] caption:send received from ${speakerName} in ${meetingId}. Final: ${isFinal}, Text: "${text?.substring(0, 20)}..."`);
+        // NEW: Real-time speech monitoring & translation handler
+        socket.on("speech:monitor", async (data) => {
+            console.log("🎤 Speech monitor event received:", { userId: socket.handshake.auth?.userId, text: data.text });
+            const { meetingId, text, isFinal, language, utteranceId } = data;
 
-            try {
-                // Get speaker name from socket auth if not provided
-                const displayName = speakerName || socket.handshake.auth?.userName || "Participant";
+            // 1. Broadcast RAW speech to everyone else immediately (Low Latency)
+            socket.to(meetingId).emit("speech:incoming", {
+                speakerUserId: socket.handshake.auth?.userId, // Secure ID from auth
+                speakerName: socket.handshake.auth?.userName || "Participant",
+                text,
+                isFinal,
+                originalLanguage: language,
+                utteranceId,
+                timestamp: new Date()
+            });
 
-                // Get target languages from in-memory participants (real-time data)
-                const participantsInMeeting = meetingParticipants.get(meetingId);
-                const targetLanguages = new Set();
+            // 2. If Final, perform translation asynchronously
+            if (isFinal) {
+                try {
+                    const participants = meetingParticipants.get(meetingId);
+                    const targetLanguages = new Set();
 
-                if (participantsInMeeting) {
-                    console.log(`[DEBUG] Participants in room ${meetingId}: ${participantsInMeeting.size}`);
-                } else {
-                    console.warn(`[DEBUG] No participants map found for meeting ${meetingId}`);
-                }
-
-                // ... (translation logic omitted for brevity as it's unchanged) ...
-                if (participantsInMeeting && participantsInMeeting.size > 0) {
-                    for (const [, participant] of participantsInMeeting) {
-                        if (participant.language && participant.language !== language) {
-                            targetLanguages.add(participant.language);
+                    if (participants) {
+                        for (const [, p] of participants) {
+                            if (p.language && p.language !== language) {
+                                targetLanguages.add(p.language);
+                            }
                         }
                     }
-                }
 
-                // Translate to other participant languages
-                let translations = [];
-                if (targetLanguages.size > 0 && isFinal) {
-                    console.log(`[DEBUG] Translating caption to: ${Array.from(targetLanguages)}`);
-                    try {
+                    if (targetLanguages.size > 0) {
+                        // Async translation - does not block the raw broadcast
                         const translatedTexts = await lingoService.translateText(
                             text,
                             language,
                             Array.from(targetLanguages)
                         );
-                        translations = Object.entries(translatedTexts).map(([lang, translatedText]) => ({
+
+                        // Broadcast translations
+                        const translations = Object.entries(translatedTexts).map(([lang, txt]) => ({
                             language: lang,
-                            text: translatedText,
+                            text: txt
                         }));
-                        console.log(`[DEBUG] Translation complete.`);
-                    } catch (translateError) {
-                        console.error("Caption translation error:", translateError);
-                    }
-                }
 
-                // Broadcast captions to all participants immediately, excluding sender
-                console.log(`[DEBUG] Broadcasting caption:incoming to room ${meetingId}`);
-                socket.to(meetingId).emit("caption:incoming", {
-                    speakerUserId,
-                    speakerName: displayName,
-                    originalText: text,
-                    originalLanguage: language,
-                    translations,
-                    isFinal,
-                    timestamp: new Date(),
-                    utteranceId
-                });
+                        // Emit separate translation event
+                        io.to(meetingId).emit("translation:incoming", {
+                            utteranceId, // Link back to original speech
+                            translations,
+                            originalText: text, // Context
+                            timestamp: new Date()
+                        });
 
-                // Optionally save to database for history (only final captions)
-                if (isFinal) {
-                    try {
-                        await captionsService.saveCaptionWithTranslations(
-                            meetingId,
-                            speakerUserId,
-                            text,
-                            language,
-                            isFinal
-                        );
-                    } catch (saveError) {
-                        console.error("Caption save error:", saveError);
-                        // Don't block the broadcast if save fails
+                        // Save to DB
+                        try {
+                            await captionsService.saveCaptionWithTranslations(
+                                meetingId,
+                                socket.handshake.auth?.userId,
+                                text,
+                                language,
+                                true // isFinal
+                            );
+                        } catch (e) { console.error("DB Save failed", e); }
                     }
+                } catch (err) {
+                    console.error("Translation error:", err);
                 }
-            } catch (error) {
-                console.error("Caption error:", error);
             }
         });
 
