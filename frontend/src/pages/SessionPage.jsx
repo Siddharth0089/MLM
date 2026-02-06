@@ -409,9 +409,10 @@ function ActiveMeetingView({
   startListening,
   stopListening
 }) {
-  const { useCameraState, useMicrophoneState, useParticipantCount } = useCallStateHooks();
+  const { useCameraState, useMicrophoneState, useScreenShareState, useParticipantCount } = useCallStateHooks();
   const { camera, isMute: isCamMuted } = useCameraState();
   const { microphone, isMute: isMicMuted } = useMicrophoneState();
+  const { screenShare, isMute: isScreenShareDisabled } = useScreenShareState();
   const participantCount = useParticipantCount();
   const call = useCall();
 
@@ -419,6 +420,7 @@ function ActiveMeetingView({
 
   const isCamOn = !isCamMuted;
   const isMicOn = !isMicMuted;
+  const isScreenSharing = !isScreenShareDisabled;
 
   // Handle local audio output mute (Deafen) - Polling approach for performance
   useEffect(() => {
@@ -484,6 +486,15 @@ function ActiveMeetingView({
       localStorage.setItem('camEnabled', isCamMuted ? 'true' : 'false');
     } catch (err) {
       console.error("Error toggling camera:", err);
+    }
+  };
+
+  const toggleScreenShare = async () => {
+    try {
+      await screenShare?.toggle();
+    } catch (err) {
+      console.error("Error toggling screen share:", err);
+      toast.error("Failed to share screen");
     }
   };
 
@@ -583,8 +594,9 @@ function ActiveMeetingView({
           </button>
 
           <button
-            className="w-12 h-12 rounded-full flex items-center justify-center bg-[#3c4043] hover:bg-[#474a4d] text-white border border-gray-600 transition-all duration-200"
-            title="Present screen (Not fully implemented)"
+            onClick={toggleScreenShare}
+            className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${isScreenSharing ? 'bg-green-500 hover:bg-green-600 text-white shadow-lg' : 'bg-[#3c4043] hover:bg-[#474a4d] text-white border border-gray-600'}`}
+            title={isScreenSharing ? "Stop presenting" : "Present screen"}
           >
             <MonitorUp className="w-5 h-5" />
           </button>
