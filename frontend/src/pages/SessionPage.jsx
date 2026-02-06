@@ -84,7 +84,7 @@ function SessionPage() {
   } = useSocket(effectiveUser?.id, effectiveUser?.fullName || effectiveUser?.name);
 
   // Speech recognition for live captions
-  const { startListening, stopListening, isListening, captions, transcript, resetTranscript, interimTranscript } = useSpeechRecognition(socket, sessionId, effectiveUser?.fullName || effectiveUser?.name || "Participant", language, effectiveUser?.id);
+  const { startListening, stopListening, isListening, captions, transcript, resetTranscript, interimTranscript, error: speechError, simulateCaption } = useSpeechRecognition(socket, sessionId, effectiveUser?.fullName || effectiveUser?.name || "Participant", language, effectiveUser?.id);
 
   const [showCaptions, setShowCaptions] = useState(true);
   const [participants, setParticipants] = useState([]);
@@ -349,6 +349,14 @@ function SessionPage() {
                     <span className="hidden sm:inline">Share</span>
                   </button>
 
+                  <button
+                    onClick={() => simulateCaption("Test caption " + Date.now())}
+                    className="btn btn-ghost btn-sm btn-circle-corner text-xs opacity-50 hover:opacity-100"
+                    title="Inject Fake Caption"
+                  >
+                    🐞
+                  </button>
+
                   {/* End Session */}
                   {session.status === "active" && (
                     <EndMeetingButton
@@ -377,6 +385,8 @@ function SessionPage() {
                         isListening={isListening}
                         startListening={startListening}
                         stopListening={stopListening}
+                        speechError={speechError}
+                        simulateCaption={simulateCaption}
                       />
                     </StreamCall>
                   </StreamTheme>
@@ -407,7 +417,9 @@ function ActiveMeetingView({
   language,
   isListening,
   startListening,
-  stopListening
+  stopListening,
+  speechError,
+  simulateCaption
 }) {
   const { useCameraState, useMicrophoneState, useScreenShareState, useParticipantCount } = useCallStateHooks();
   const { camera, isMute: isCamMuted } = useCameraState();
@@ -519,6 +531,13 @@ function ActiveMeetingView({
 
   return (
     <div className="h-full flex flex-col bg-[#202124] relative">
+      {/* Error Alert for Captions */}
+      {speechError && showCaptions && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-[110] bg-red-500/90 text-white px-4 py-2 rounded-full text-xs font-medium backdrop-blur-sm shadow-lg flex items-center gap-2 animate-fade-in-down">
+          <div className="w-4 h-4 rounded-full bg-white/20 flex items-center justify-center">!</div>
+          <span>Caption Error: {speechError === 'network' ? 'Speech Service Unreachable' : speechError}</span>
+        </div>
+      )}
       {/* Video Grid Area */}
       <div className="flex-1 relative overflow-hidden flex items-center justify-center p-4">
         <div
@@ -536,11 +555,10 @@ function ActiveMeetingView({
 
         {/* Live Captions Overlay */}
         {showCaptions && (
-          <div className="absolute bottom-4 left-4 right-4 z-[100] pointer-events-none">
+          <div className="absolute bottom-4 left-0 right-0 z-[9999] pointer-events-none flex justify-center">
             <CaptionOverlay
               captions={captions}
               userLanguage={language}
-              isSpeaking={isListening}
             />
           </div>
         )}

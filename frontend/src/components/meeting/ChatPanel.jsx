@@ -35,7 +35,19 @@ const ChatPanel = ({ meetingId, userId, userName, userLanguage, socket, onClose 
 
         // Handle new messages
         const handleMessage = (message) => {
-            setMessages((prev) => [...prev, message]);
+            setMessages((prev) => {
+                // If message has clientMessageId, check if we already have it (optimistic update)
+                if (message.clientMessageId) {
+                    const index = prev.findIndex(m => m.clientMessageId === message.clientMessageId);
+                    if (index !== -1) {
+                        // Replace pending message with confirmed one
+                        const newMessages = [...prev];
+                        newMessages[index] = message;
+                        return newMessages;
+                    }
+                }
+                return [...prev, message];
+            });
         };
 
         // Handle errors
@@ -59,15 +71,32 @@ const ChatPanel = ({ meetingId, userId, userName, userLanguage, socket, onClose 
     const handleSend = useCallback(() => {
         if (!inputText.trim() || !socket) return;
 
+        const text = inputText.trim();
+        const clientMessageId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const now = new Date();
+
+        // Optimistic update
+        const tempMsg = {
+            _id: `temp-${clientMessageId}`,
+            userId,
+            userName,
+            originalText: text,
+            createdAt: now.toISOString(),
+            clientMessageId,
+            translations: {} // Translations arrive with server ack
+        };
+
+        setMessages(prev => [...prev, tempMsg]);
+        setInputText("");
+
         socket.emit("chat:send", {
             meetingId,
             userId,
             userName,
-            text: inputText.trim(),
+            text,
             language: userLanguage || "en",
+            clientMessageId
         });
-
-        setInputText("");
     }, [inputText, socket, meetingId, userId, userName, userLanguage]);
 
     // Handle Enter key - memoized

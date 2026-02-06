@@ -148,7 +148,7 @@ export function initializeSocketServer(httpServer) {
 
         // Chat: Send message with translation
         socket.on("chat:send", async (data) => {
-            const { meetingId, userId, userName, text, language } = data;
+            const { meetingId, userId, userName, text, language, clientMessageId } = data;
 
             try {
                 // Create message object with translations map
@@ -204,6 +204,7 @@ export function initializeSocketServer(httpServer) {
                     originalLanguage: language,
                     translations: Object.fromEntries(translations),
                     createdAt: chatMessage.createdAt,
+                    clientMessageId // Pass back for optimistic UI updates
                 });
 
                 console.log(`Chat message sent by ${userName} in meeting ${meetingId}`);

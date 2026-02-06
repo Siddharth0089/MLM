@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { io } from "socket.io-client";
 
 // Determine socket URL:
@@ -48,7 +48,7 @@ export function useSocket(userId, userName) {
         };
     }, [userId, userName]);
 
-    const joinMeeting = (meetingId, preferredLanguage) => {
+    const joinMeeting = useCallback((meetingId, preferredLanguage) => {
         if (socketRef.current && isConnected) {
             socketRef.current.emit("meeting:join", {
                 meetingId,
@@ -57,18 +57,18 @@ export function useSocket(userId, userName) {
                 preferredLanguage,
             });
         }
-    };
+    }, [isConnected, userId, userName]);
 
-    const sendNoteUpdate = (meetingId, noteData) => {
+    const sendNoteUpdate = useCallback((meetingId, noteData) => {
         if (socketRef.current && isConnected) {
             socketRef.current.emit("note:update", {
                 meetingId,
                 ...noteData,
             });
         }
-    };
+    }, [isConnected]);
 
-    const sendCaption = (meetingId, captionData) => {
+    const sendCaption = useCallback((meetingId, captionData) => {
         if (socketRef.current && isConnected) {
             socketRef.current.emit("caption:send", {
                 meetingId,
@@ -77,15 +77,15 @@ export function useSocket(userId, userName) {
                 ...captionData,
             });
         }
-    };
+    }, [isConnected, userId, userName]);
 
-    const endMeeting = (meetingId) => {
+    const endMeeting = useCallback((meetingId) => {
         if (socketRef.current && isConnected) {
             socketRef.current.emit("meeting:end", { meetingId });
         }
-    };
+    }, [isConnected]);
 
-    const raiseHand = (meetingId) => {
+    const raiseHand = useCallback((meetingId) => {
         if (socketRef.current && isConnected) {
             socketRef.current.emit("hand:raise", {
                 meetingId,
@@ -93,9 +93,9 @@ export function useSocket(userId, userName) {
                 userName
             });
         }
-    };
+    }, [isConnected, userId, userName]);
 
-    const updateLanguage = (meetingId, newLanguage) => {
+    const updateLanguage = useCallback((meetingId, newLanguage) => {
         if (socketRef.current && isConnected) {
             socketRef.current.emit("language:update", {
                 meetingId,
@@ -103,22 +103,22 @@ export function useSocket(userId, userName) {
                 language: newLanguage
             });
         }
-    };
+    }, [isConnected, userId]);
 
-    const on = (event, handler) => {
+    const on = useCallback((event, handler) => {
         if (socketRef.current) {
             socketRef.current.on(event, handler);
         }
-    };
+    }, []);
 
-    const off = (event, handler) => {
+    const off = useCallback((event, handler) => {
         if (socketRef.current) {
             socketRef.current.off(event, handler);
         }
-    };
+    }, []);
 
     // Chat helpers
-    const sendChatMessage = (meetingId, text, language) => {
+    const sendChatMessage = useCallback((meetingId, text, language) => {
         if (socketRef.current && isConnected) {
             socketRef.current.emit("chat:send", {
                 meetingId,
@@ -128,13 +128,13 @@ export function useSocket(userId, userName) {
                 language,
             });
         }
-    };
+    }, [isConnected, userId, userName]);
 
-    const getChatHistory = (meetingId) => {
+    const getChatHistory = useCallback((meetingId) => {
         if (socketRef.current && isConnected) {
             socketRef.current.emit("chat:history", { meetingId });
         }
-    };
+    }, [isConnected]);
 
     return {
         socket: socketRef.current,
