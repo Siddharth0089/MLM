@@ -54,9 +54,11 @@ function CaptionOverlay({ captions = [], userLanguage }) {
     // Auto-hide timer
     useEffect(() => {
         if (captions.length > 0) {
+            console.log("[DEBUG] CaptionOverlay received captions:", captions.length, captions[captions.length - 1]);
             setShowOverlay(true);
             const timer = setTimeout(() => {
-                setShowOverlay(false);
+                // setShowOverlay(false); // DEBUG: Keep overlay visible
+                console.log("[DEBUG] CaptionOverlay auto-hide trigger (IGNORED)");
             }, 5000); // Hide after 5 seconds of no new captions
             return () => clearTimeout(timer);
         }

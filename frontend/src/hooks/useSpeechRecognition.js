@@ -59,7 +59,7 @@ export function useSpeechRecognition(socket, meetingId, userName, language = "en
                 }
 
                 // Otherwise, append as new caption
-                console.log("Appending new caption:", data); // DEBUG LOG
+                console.log("[DEBUG] Appending new caption:", data);
                 const newCaptions = [...prev, data];
                 // Keep last 50 captions to avoid memory bloat
                 if (newCaptions.length > 50) return newCaptions.slice(newCaptions.length - 50);
@@ -67,6 +67,7 @@ export function useSpeechRecognition(socket, meetingId, userName, language = "en
             });
         };
 
+        console.log("[DEBUG] Listening for caption:incoming on socket:", socket.id);
         socket.on("caption:incoming", handleCaption);
 
         return () => {

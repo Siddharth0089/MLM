@@ -1,0 +1,141 @@
+nohup: ignoring input
+
+> judge-backend@1.0.0 start
+> node src/server.js
+
+✅ Lingo.dev SDK initialized
+✅ Stream.io client initialized
+✅ MongoDB connected successfully
+🚀 Server running on http://localhost:3000
+📡 Socket.IO server ready for connections
+Client connected: T-gSKEzYkMMlLO0VAAAB
+User Guest User 879 (user_1769803429080) joined meeting 69862c841fdc91c83939d8ef [Lang: hi-IN]
+Client connected: VcL1KwRMe3AzYYBaAAAD
+User Guest User 879 (user_1769803429080) joined meeting 69861f7f1fdc91c83939d11a [Lang: en-US]
+Client connected: t8EGwyZRWWBASkTpAAAF
+User Guest User 897 (user_1769805335800) joined meeting 69861f7f1fdc91c83939d11a [Lang: hi-IN]
+Client disconnected: VcL1KwRMe3AzYYBaAAAD
+Client connected: b1rOeeODk-O1bPP9AAAI
+Socket b1rOeeODk-O1bPP9AAAI subscribed to dashboard updates
+POST /api/sessions request received: { sessionName: 'Log Test Session' }
+Generated callId: 682ffac8-0926-4eac-aa87-6cccdb239af5
+Session saved to DB: new ObjectId('69862ea9c989c4dbb0e8c62f')
+Broadcasted session:created for 69862ea9c989c4dbb0e8c62f
+Client disconnected: b1rOeeODk-O1bPP9AAAI
+Client connected: 6IfkhY7Q-cl6_cgRAAAL
+User Guest User 879 (user_1769803429080) joined meeting 69862ea9c989c4dbb0e8c62f [Lang: en-US]
+User user_1769803429080 updated language to en-US in meeting 69862c841fdc91c83939d8ef
+Updated language for socket T-gSKEzYkMMlLO0VAAAB to en-US
+Error sending meeting minutes: Error: Meeting not found
+    at EmailService.sendMeetingMinutes (file:///home/knight/Desktop/hach_proj/coding_platform/backend/src/services/email.service.js:22:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Socket.<anonymous> (file:///home/knight/Desktop/hach_proj/coding_platform/backend/src/sockets/index.js:347:25)
+Error sending meeting minutes: Error: Meeting not found
+    at EmailService.sendMeetingMinutes (file:///home/knight/Desktop/hach_proj/coding_platform/backend/src/services/email.service.js:22:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Socket.<anonymous> (file:///home/knight/Desktop/hach_proj/coding_platform/backend/src/sockets/index.js:347:25)
+Client disconnected: T-gSKEzYkMMlLO0VAAAB
+Client connected: jNQM5erJ4jtIAUn3AAAO
+Socket jNQM5erJ4jtIAUn3AAAO subscribed to dashboard updates
+Client disconnected: jNQM5erJ4jtIAUn3AAAO
+Client connected: VFGLMw4iAaE6a9bxAAAR
+User Guest User 879 (user_1769803429080) joined meeting 69861f7f1fdc91c83939d11a [Lang: en-US]
+Lingo translation error (en-US->hi-IN): Maximum number of translated words of your free plan reached, Trying to translate 638 words, remaining 0 words. Please upgrade.
+Using fallback translation for hi-IN
+Chat message sent by Guest User 879 in meeting 69861f7f1fdc91c83939d11a
+User user_1769805335800 updated language to en-US in meeting 69861f7f1fdc91c83939d11a
+Updated language for socket t8EGwyZRWWBASkTpAAAF to en-US
+[DEBUG] caption:send received from Guest User 897 in 69861f7f1fdc91c83939d11a. Final: false, Text: "aage..."
+[DEBUG] Participants in room 69861f7f1fdc91c83939d11a: 2
+[DEBUG] Broadcasting caption:incoming to room 69861f7f1fdc91c83939d11a
+Client disconnected: t8EGwyZRWWBASkTpAAAF
+Client connected: PVxu9ymtHbKya300AAAU
+User Guest User 897 (user_1769805335800) joined meeting 69861f7f1fdc91c83939d11a [Lang: en-US]
+Client disconnected: VFGLMw4iAaE6a9bxAAAR
+Client connected: axGoNUp9vfqebHuQAAAX
+Socket axGoNUp9vfqebHuQAAAX subscribed to dashboard updates
+POST /api/sessions request received: { sessionName: 'Log Test Session 2' }
+Generated callId: a13ecd35-350a-4f72-93ba-039fe6b8ea6b
+Session saved to DB: new ObjectId('69862f58c989c4dbb0e8c683')
+Broadcasted session:created for 69862f58c989c4dbb0e8c683
+Client disconnected: axGoNUp9vfqebHuQAAAX
+Client connected: 06kkwRHIUaPWkPiNAAAa
+User Guest User 879 (user_1769803429080) joined meeting 69862f58c989c4dbb0e8c683 [Lang: en-US]
+User Guest User 879 (user_1769803429080) joined meeting 69862f58c989c4dbb0e8c683 [Lang: en-US]
+User Guest User 879 (user_1769803429080) joined meeting 69862ea9c989c4dbb0e8c62f [Lang: en-US]
+Client disconnected: PVxu9ymtHbKya300AAAU
+❌ Error fetching session: MongoServerSelectionError: connection <monitor> to 159.41.207.100:27017 closed
+    at Topology.selectServer (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/sdam/topology.js:327:38)
+    at async tryOperation (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/operations/execute_operation.js:196:22)
+    at async executeOperation (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/operations/execute_operation.js:78:16)
+    at async FindCursor._initialize (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/cursor/find_cursor.js:62:26)
+    at async FindCursor.cursorInit (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/cursor/abstract_cursor.js:632:27)
+    at async FindCursor.fetchBatch (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/cursor/abstract_cursor.js:666:13)
+    at async FindCursor.next (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/cursor/abstract_cursor.js:342:17)
+    at async Collection.findOne (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/collection.js:313:24)
+    at async model.Query._findOne (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongoose/lib/query.js:2710:15)
+    at async model.Query.exec (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongoose/lib/query.js:4627:63) {
+  errorLabelSet: Set(0) {},
+  reason: TopologyDescription {
+    type: 'ReplicaSetNoPrimary',
+    servers: Map(3) {
+      'ac-rqyrlvi-shard-00-00.lirmnzz.mongodb.net:27017' => [ServerDescription],
+      'ac-rqyrlvi-shard-00-01.lirmnzz.mongodb.net:27017' => [ServerDescription],
+      'ac-rqyrlvi-shard-00-02.lirmnzz.mongodb.net:27017' => [ServerDescription]
+    },
+    stale: false,
+    compatible: true,
+    heartbeatFrequencyMS: 10000,
+    localThresholdMS: 15,
+    setName: 'atlas-xhf9xz-shard-0',
+    maxElectionId: new ObjectId('7fffffff000000000000011b'),
+    maxSetVersion: 73,
+    commonWireVersion: 0,
+    logicalSessionTimeoutMinutes: 30
+  },
+  code: undefined,
+  [cause]: MongoNetworkError: connection <monitor> to 159.41.207.100:27017 closed
+      at Connection.destroy (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/cmap/connection.js:139:22)
+      at resetMonitorState (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/sdam/monitor.js:150:25)
+      at Monitor.reset (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/sdam/monitor.js:106:9)
+      at markServerUnknown (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/sdam/server.js:356:25)
+      at Server.handleError (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/sdam/server.js:249:17)
+      at Server.decorateCommandError (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/sdam/server.js:319:14)
+      at Server.command (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/sdam/server.js:199:28)
+      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+      at async tryOperation (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/operations/execute_operation.js:213:32)
+      at async executeOperation (/home/knight/Desktop/hach_proj/coding_platform/backend/node_modules/mongodb/lib/operations/execute_operation.js:78:16) {
+    errorLabelSet: Set(1) { 'ResetPool' },
+    beforeHandshake: false,
+    [cause]: undefined
+  }
+}
+Error sending meeting minutes: Error: Meeting not found
+    at EmailService.sendMeetingMinutes (file:///home/knight/Desktop/hach_proj/coding_platform/backend/src/services/email.service.js:22:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Socket.<anonymous> (file:///home/knight/Desktop/hach_proj/coding_platform/backend/src/sockets/index.js:347:25)
+Error sending meeting minutes: Error: Meeting not found
+    at EmailService.sendMeetingMinutes (file:///home/knight/Desktop/hach_proj/coding_platform/backend/src/services/email.service.js:22:15)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Socket.<anonymous> (file:///home/knight/Desktop/hach_proj/coding_platform/backend/src/sockets/index.js:347:25)
+Client disconnected: 6IfkhY7Q-cl6_cgRAAAL
+Client connected: dlnwkCN_hkCfRjD7AAAd
+Socket dlnwkCN_hkCfRjD7AAAd subscribed to dashboard updates
+Client disconnected: dlnwkCN_hkCfRjD7AAAd
+Client connected: LYuPtXS1Mr-hfMLlAAAg
+User Guest User 879 (user_1769803429080) joined meeting 69861f7f1fdc91c83939d11a [Lang: en-US]
+Client disconnected: 06kkwRHIUaPWkPiNAAAa
+Client connected: 3ESwI6nrqy-32MXLAAAj
+Socket 3ESwI6nrqy-32MXLAAAj subscribed to dashboard updates
+Client connected: W4motL1MoPn3L6qTAAAm
+User Guest User 897 (user_1769805335800) joined meeting 69861f7f1fdc91c83939d11a [Lang: en-US]
+Client disconnected: 3ESwI6nrqy-32MXLAAAj
+Client connected: 5oK0ZcSWnZXrrPYiAAAp
+Socket 5oK0ZcSWnZXrrPYiAAAp subscribed to dashboard updates
+POST /api/sessions request received: { sessionName: 'Log Test Session 3' }
+Generated callId: b97d3f84-6cff-4d9f-b11d-ccd85fcd7326
+Session saved to DB: new ObjectId('698630f4c989c4dbb0e8c713')
+Broadcasted session:created for 698630f4c989c4dbb0e8c713
+Client disconnected: 5oK0ZcSWnZXrrPYiAAAp
+Client connected: sklPobxbp9lyLh1NAAAs
+User Guest User 879 (user_1769803429080) joined meeting 698630f4c989c4dbb0e8c713 [Lang: en-US]
