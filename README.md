@@ -1,8 +1,8 @@
-# 🌐 TalentIQ (Meetio) - Breaking Language Barriers in Real-Time
+# 🌐 Meetio - Breaking Language Barriers in Real-Time
 
-> **Winner Hackathon Project** | *Seamless Video Conferencing with Real-Time Translation*
+*Seamless Video Conferencing with Real-Time Translation*
 
-**TalentIQ** is a next-generation video conferencing platform built to eliminate language barriers. By integrating real-time translation into every aspect of the meeting experience—chat, live captions, and collaborative notes—we ensure that every participant can communicate naturally in their own language.
+**Meetio** is a next-generation video conferencing platform built to eliminate language barriers. By integrating real-time translation into every aspect of the meeting experience—chat, live captions, and collaborative notes—we ensure that every participant can communicate naturally in their own language.
 
 ## 🚀 Key Features
 
