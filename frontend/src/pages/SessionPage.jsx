@@ -349,14 +349,6 @@ function SessionPage() {
                     <span className="hidden sm:inline">Share</span>
                   </button>
 
-                  <button
-                    onClick={() => simulateCaption("Test caption " + Date.now())}
-                    className="btn btn-ghost btn-sm btn-circle-corner text-xs opacity-50 hover:opacity-100"
-                    title="Inject Fake Caption"
-                  >
-                    🐞
-                  </button>
-
                   {/* End Session */}
                   {session.status === "active" && (
                     <EndMeetingButton
@@ -386,7 +378,6 @@ function SessionPage() {
                         startListening={startListening}
                         stopListening={stopListening}
                         speechError={speechError}
-                        simulateCaption={simulateCaption}
                       />
                     </StreamCall>
                   </StreamTheme>
@@ -418,8 +409,7 @@ function ActiveMeetingView({
   isListening,
   startListening,
   stopListening,
-  speechError,
-  simulateCaption
+  speechError
 }) {
   const { useCameraState, useMicrophoneState, useScreenShareState, useParticipantCount } = useCallStateHooks();
   const { camera, isMute: isCamMuted } = useCameraState();
@@ -559,6 +549,7 @@ function ActiveMeetingView({
             <CaptionOverlay
               captions={captions}
               userLanguage={language}
+              isSpeaking={isListening}
             />
           </div>
         )}

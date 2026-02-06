@@ -44,6 +44,7 @@ function MeetingNotesPanel({
     const [isLocked, setIsLocked] = useState(false);
 
     // Initialize Quill editor
+    // Initialize Quill editor
     useEffect(() => {
         if (!editorRef.current || quillRef.current) return;
 
@@ -51,12 +52,9 @@ function MeetingNotesPanel({
             theme: "snow",
             placeholder: t("meeting.notes"),
             modules: {
-                toolbar: [
-                    [{ header: [1, 2, 3, false] }],
-                    ["bold", "italic", "underline"],
-                    [{ list: "ordered" }, { list: "bullet" }],
-                    ["clean"],
-                ],
+                toolbar: {
+                    container: "#meeting-notes-toolbar",
+                },
             },
         });
 
@@ -194,11 +192,6 @@ function MeetingNotesPanel({
 
     return (
         <div className="h-full flex flex-col bg-base-100 rounded-lg overflow-hidden meeting-notes-container">
-            <style>{`
-                .meeting-notes-container .ql-toolbar ~ .ql-toolbar {
-                    display: none !important;
-                }
-            `}</style>
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-base-300 bg-base-200">
                 <div className="flex items-center gap-2">
@@ -239,11 +232,28 @@ function MeetingNotesPanel({
                 </div>
             </div>
 
+            {/* Explicit Toolbar Container */}
+            <div id="meeting-notes-toolbar" className="border-b border-base-300 bg-base-100/50">
+                <span className="ql-formats">
+                    <button className="ql-bold" aria-label="Bold"></button>
+                    <button className="ql-italic" aria-label="Italic"></button>
+                    <button className="ql-underline" aria-label="Underline"></button>
+                </span>
+                <span className="ql-formats">
+                    <button className="ql-list" value="ordered" aria-label="Ordered List"></button>
+                    <button className="ql-list" value="bullet" aria-label="Bullet List"></button>
+                </span>
+                <span className="ql-formats">
+                    <button className="ql-clean" aria-label="Clean Formatting"></button>
+                </span>
+            </div>
+
             {/* Editor Container - Using overlay for lock instead of quill.disable() */}
-            <div className="flex-1 overflow-auto p-4 relative">
+            <div className="flex-1 overflow-auto p-4 relative flex flex-col">
                 <div
                     ref={editorRef}
-                    className="min-h-[300px] bg-white rounded-lg border border-base-300 text-gray-900"
+                    className="flex-1 bg-white rounded-b-lg border-none text-gray-900"
+                    style={{ border: 'none' }}
                 ></div>
 
                 {/* Lock overlay - prevents interaction without breaking layout */}
