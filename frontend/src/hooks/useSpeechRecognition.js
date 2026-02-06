@@ -101,6 +101,26 @@ export function useSpeechRecognition(socket, meetingId, userName, language = "en
                         final += result[0].transcript;
                         // Broadcast final immediately
                         console.log("🎤 Speech Final:", result[0].transcript);
+
+                        // OPTIMISTIC UPDATE: Show our own caption immediately
+                        const finalCaption = {
+                            id: Date.now(),
+                            utteranceId,
+                            speakerUserId: userIdRef.current,
+                            speakerName: userNameRef.current || 'You',
+                            originalText: result[0].transcript,
+                            text: result[0].transcript, // For display
+                            language: language,
+                            isFinal: true,
+                            timestamp: new Date()
+                        };
+
+                        setCaptions(prev => {
+                            const newCaptions = [...prev, finalCaption];
+                            if (newCaptions.length > 50) return newCaptions.slice(newCaptions.length - 50);
+                            return newCaptions;
+                        });
+
                         if (socketRef.current && meetingIdRef.current) {
                             console.log("🚀 Emitting caption:send (Final)");
                             socketRef.current.emit("caption:send", {
@@ -145,15 +165,9 @@ export function useSpeechRecognition(socket, meetingId, userName, language = "en
                     return;
                 }
 
-                if (event.error === 'network') {
+                if (event.error === 'network' || event.error === 'aborted') {
                     retryCountRef.current += 1;
-                    console.warn(`Network error (attempt ${retryCountRef.current})`);
-
-                    // SUPPRESS UI BANNER for network errors
-                    // We just let it retry silently in the background
-                    // if (retryCountRef.current > 3) {
-                    //      setError('network'); 
-                    // }
+                    console.warn(`Speech Error (${event.error}) - attempt ${retryCountRef.current}`);
                     return;
                 }
 
@@ -238,6 +252,7 @@ export function useSpeechRecognition(socket, meetingId, userName, language = "en
                 recognitionRef.current.stop();
             } catch (e) { }
             setIsListening(false);
+            setError(null); // Clear any pending errors (like aborted)
         }
     }, [isListening]);
 

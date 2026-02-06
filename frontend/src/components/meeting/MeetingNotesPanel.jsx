@@ -145,14 +145,19 @@ function MeetingNotesPanel({
             // CRITICAL: Don't update if:
             // 1. Editor has focus (user is actively typing)
             // 2. User is currently typing (ref-based check)
-            // 3. Incoming text matches what we last sent (echo prevention)
+            // 3. Incoming text matches what we last sent (echo prevention) - Backend now handles this, but keeping as safety
             // 4. Incoming text is the same as current content
+
+            // If we have focus or are actively typing, we generally ignore updates to prevent cursor jumps
+            // UNLESS it's a lock override or specific scenario, but for now safe to ignore
             if (hasFocusRef.current || isTypingRef.current) {
-                return; // User is actively editing, ignore incoming
+                return;
             }
 
+            // We can trust backend to not echo back raw text, so this check is less critical but good for redundancy
             if (incomingText === lastSentTextRef.current) {
-                return; // This is our own echo, ignore
+                // If backend is fixed to use socket.to, this might not be needed, but harmless to keep
+                return;
             }
 
             if (incomingText === currentText) {

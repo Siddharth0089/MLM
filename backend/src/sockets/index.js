@@ -63,7 +63,7 @@ export function initializeSocketServer(httpServer) {
 
                 // CRITICAL: Always broadcast the original text first!
                 // This ensures basic syncing works even if translation service fails.
-                io.to(meetingId).emit("note:translated", {
+                socket.to(meetingId).emit("note:translated", {
                     language: canonicalLanguage,
                     text: plainText,
                     html: html || plainText,
@@ -253,6 +253,7 @@ export function initializeSocketServer(httpServer) {
         // Caption event (if using client-side STT or sending pre-transcribed text)
         socket.on("caption:send", async (data) => {
             const { meetingId, speakerUserId, speakerName, text, language, isFinal, utteranceId } = data;
+            console.log(`[DEBUG] caption:send received from ${speakerName} in ${meetingId}. Final: ${isFinal}, Text: "${text?.substring(0, 20)}..."`);
 
             try {
                 // Get speaker name from socket auth if not provided
@@ -261,6 +262,12 @@ export function initializeSocketServer(httpServer) {
                 // Get target languages from in-memory participants (real-time data)
                 const participantsInMeeting = meetingParticipants.get(meetingId);
                 const targetLanguages = new Set();
+
+                if (participantsInMeeting) {
+                    console.log(`[DEBUG] Participants in room ${meetingId}: ${participantsInMeeting.size}`);
+                } else {
+                    console.warn(`[DEBUG] No participants map found for meeting ${meetingId}`);
+                }
 
                 // ... (translation logic omitted for brevity as it's unchanged) ...
                 if (participantsInMeeting && participantsInMeeting.size > 0) {
@@ -274,6 +281,7 @@ export function initializeSocketServer(httpServer) {
                 // Translate to other participant languages
                 let translations = [];
                 if (targetLanguages.size > 0 && isFinal) {
+                    console.log(`[DEBUG] Translating caption to: ${Array.from(targetLanguages)}`);
                     try {
                         const translatedTexts = await lingoService.translateText(
                             text,
@@ -284,13 +292,15 @@ export function initializeSocketServer(httpServer) {
                             language: lang,
                             text: translatedText,
                         }));
+                        console.log(`[DEBUG] Translation complete.`);
                     } catch (translateError) {
                         console.error("Caption translation error:", translateError);
                     }
                 }
 
-                // Broadcast captions to all participants immediately
-                io.to(meetingId).emit("caption:incoming", {
+                // Broadcast captions to all participants immediately, excluding sender
+                console.log(`[DEBUG] Broadcasting caption:incoming to room ${meetingId}`);
+                socket.to(meetingId).emit("caption:incoming", {
                     speakerUserId,
                     speakerName: displayName,
                     originalText: text,

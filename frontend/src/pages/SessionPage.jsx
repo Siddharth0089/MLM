@@ -378,6 +378,7 @@ function SessionPage() {
                         startListening={startListening}
                         stopListening={stopListening}
                         speechError={speechError}
+                        interimTranscript={interimTranscript}
                       />
                     </StreamCall>
                   </StreamTheme>
@@ -409,7 +410,8 @@ function ActiveMeetingView({
   isListening,
   startListening,
   stopListening,
-  speechError
+  speechError,
+  interimTranscript
 }) {
   const { useCameraState, useMicrophoneState, useScreenShareState, useParticipantCount } = useCallStateHooks();
   const { camera, isMute: isCamMuted } = useCameraState();
@@ -547,7 +549,15 @@ function ActiveMeetingView({
         {showCaptions && (
           <div className="absolute bottom-4 left-0 right-0 z-[9999] pointer-events-none flex justify-center">
             <CaptionOverlay
-              captions={captions}
+              captions={interimTranscript ? [...captions, {
+                id: 'interim-' + Date.now(),
+                speakerUserId: effectiveUser?.id,
+                speakerName: effectiveUser?.fullName || effectiveUser?.name || "You",
+                originalText: interimTranscript,
+                isFinal: false,
+                originalLanguage: language,
+                timestamp: new Date()
+              }] : captions}
               userLanguage={language}
               isSpeaking={isListening}
             />
