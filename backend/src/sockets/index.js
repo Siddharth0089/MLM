@@ -251,7 +251,7 @@ export function initializeSocketServer(httpServer) {
 
         // Caption event (if using client-side STT or sending pre-transcribed text)
         socket.on("caption:send", async (data) => {
-            const { meetingId, speakerUserId, speakerName, text, language, isFinal } = data;
+            const { meetingId, speakerUserId, speakerName, text, language, isFinal, utteranceId } = data;
 
             try {
                 // Get speaker name from socket auth if not provided
@@ -261,6 +261,7 @@ export function initializeSocketServer(httpServer) {
                 const participantsInMeeting = meetingParticipants.get(meetingId);
                 const targetLanguages = new Set();
 
+                // ... (translation logic omitted for brevity as it's unchanged) ...
                 if (participantsInMeeting && participantsInMeeting.size > 0) {
                     for (const [, participant] of participantsInMeeting) {
                         if (participant.language && participant.language !== language) {
@@ -284,7 +285,6 @@ export function initializeSocketServer(httpServer) {
                         }));
                     } catch (translateError) {
                         console.error("Caption translation error:", translateError);
-                        // Continue without translations
                     }
                 }
 
@@ -297,6 +297,7 @@ export function initializeSocketServer(httpServer) {
                     translations,
                     isFinal,
                     timestamp: new Date(),
+                    utteranceId
                 });
 
                 // Optionally save to database for history (only final captions)
@@ -345,8 +346,28 @@ export function initializeSocketServer(httpServer) {
             }
         });
 
+        // Join dashboard room to receive global updates
+        socket.on("dashboard:subscribe", () => {
+            socket.join("dashboard");
+            console.log(`Socket ${socket.id} subscribed to dashboard updates`);
+        });
+
+        socket.on("dashboard:unsubscribe", () => {
+            socket.leave("dashboard");
+            console.log(`Socket ${socket.id} unsubscribed from dashboard updates`);
+        });
+
         socket.on("disconnect", () => {
             console.log("Client disconnected:", socket.id);
+            // Clean up from all meeting participant lists
+            for (const [meetingId, participants] of meetingParticipants) {
+                if (participants.has(socket.id)) {
+                    participants.delete(socket.id);
+                    if (participants.size === 0) {
+                        meetingParticipants.delete(meetingId);
+                    }
+                }
+            }
         });
     });
 
@@ -358,4 +379,28 @@ export function getIO() {
         throw new Error("Socket.io not initialized");
     }
     return io;
+}
+
+// Broadcast session created event to all dashboard subscribers
+export function broadcastSessionCreated(session) {
+    if (io) {
+        io.to("dashboard").emit("session:created", { session });
+        console.log(`Broadcasted session:created for ${session._id}`);
+    }
+}
+
+// Broadcast session updated event
+export function broadcastSessionUpdated(session) {
+    if (io) {
+        io.to("dashboard").emit("session:updated", { session });
+        console.log(`Broadcasted session:updated for ${session._id}`);
+    }
+}
+
+// Broadcast session ended event
+export function broadcastSessionEnded(sessionId) {
+    if (io) {
+        io.to("dashboard").emit("session:ended", { sessionId });
+        console.log(`Broadcasted session:ended for ${sessionId}`);
+    }
 }

@@ -24,6 +24,22 @@ function MeetingNotesPanel({
     const isTypingRef = useRef(false);
     const lastSentTextRef = useRef("");
 
+    // Stable refs for props to avoid Quill re-initialization
+    const socketRef = useRef(socket);
+    const meetingIdRef = useRef(meetingId);
+    const userIdRef = useRef(userId);
+    const userLanguageRef = useRef(userLanguage);
+    const onNoteChangeRef = useRef(onNoteChange);
+
+    // Keep refs up to date
+    useEffect(() => {
+        socketRef.current = socket;
+        meetingIdRef.current = meetingId;
+        userIdRef.current = userId;
+        userLanguageRef.current = userLanguage;
+        onNoteChangeRef.current = onNoteChange;
+    }, [socket, meetingId, userId, userLanguage, onNoteChange]);
+
     // Typing lock state (for UI display only)
     const [isLocked, setIsLocked] = useState(false);
 
@@ -64,9 +80,9 @@ function MeetingNotesPanel({
             const html = quill.root.innerHTML;
 
             // Mark as typing immediately
-            if (!isTypingRef.current && socket && meetingId) {
+            if (!isTypingRef.current && socketRef.current && meetingIdRef.current) {
                 isTypingRef.current = true;
-                socket.emit("note:lock", { meetingId, userId });
+                socketRef.current.emit("note:lock", { meetingId: meetingIdRef.current, userId: userIdRef.current });
             }
 
             // Clear previous timers
@@ -79,29 +95,29 @@ function MeetingNotesPanel({
 
             // FAST debounce - 150ms for near real-time
             debounceTimerRef.current = setTimeout(() => {
-                if (socket && meetingId) {
+                if (socketRef.current && meetingIdRef.current) {
                     setSyncing(true);
                     lastSentTextRef.current = content.trim(); // Remember what we sent
-                    socket.emit("note:update", {
-                        meetingId,
+                    socketRef.current.emit("note:update", {
+                        meetingId: meetingIdRef.current,
                         plainText: content,
                         html: html,
-                        canonicalLanguage: userLanguage,
+                        canonicalLanguage: userLanguageRef.current,
                     });
 
                     setLastSaved(new Date());
                     setTimeout(() => setSyncing(false), 300);
                 }
 
-                if (onNoteChange) {
-                    onNoteChange(content, html);
+                if (onNoteChangeRef.current) {
+                    onNoteChangeRef.current(content, html);
                 }
             }, 150);
 
             // Release lock after 2 seconds of inactivity
             lockTimerRef.current = setTimeout(() => {
-                if (socket && meetingId) {
-                    socket.emit("note:unlock", { meetingId, userId });
+                if (socketRef.current && meetingIdRef.current) {
+                    socketRef.current.emit("note:unlock", { meetingId: meetingIdRef.current, userId: userIdRef.current });
                     isTypingRef.current = false;
                 }
             }, 2000);
@@ -116,7 +132,7 @@ function MeetingNotesPanel({
             }
             quillRef.current = null;
         };
-    }, [t, meetingId, userLanguage, socket, onNoteChange, userId]);
+    }, [t]); // Only recreate Quill when translation function changes
 
     // Listen for lock/unlock and translated notes
     useEffect(() => {

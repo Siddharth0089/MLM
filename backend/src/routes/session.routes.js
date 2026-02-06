@@ -2,6 +2,8 @@ import express from "express";
 import Session from "../models/Session.js";
 import { StreamClient } from "@stream-io/node-sdk";
 import { v4 as uuidv4 } from "uuid";
+import { broadcastSessionCreated, broadcastSessionEnded } from "../sockets/index.js";
+
 const router = express.Router();
 
 // Initialize Stream client
@@ -47,6 +49,9 @@ router.post("/", async (req, res) => {
 
         await session.save();
         console.log("Session saved to DB:", session._id);
+
+        // Broadcast to all dashboard subscribers for real-time updates
+        broadcastSessionCreated(session);
 
         res.status(201).json({ session });
     } catch (error) {

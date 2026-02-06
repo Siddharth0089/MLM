@@ -1,156 +1,113 @@
-import { useEffect, useRef, useState, useMemo } from "react";
-import { useTranslation } from "react-i18next";
-import { MessageSquareIcon, GlobeIcon, MicIcon, UserIcon } from "lucide-react";
+import { useEffect, useRef, useMemo, useState } from "react";
 
-function CaptionOverlay({ captions = [], userLanguage, isSpeaking = false }) {
-    const { t } = useTranslation();
+// Language code to display name (simplified)
+const LANGUAGE_NAMES = {
+    'en-US': 'EN', 'en': 'EN', 'hi': 'HI', 'hi-IN': 'HI',
+    'es': 'ES', 'fr': 'FR', 'de': 'DE', 'zh': 'ZH',
+    'ja': 'JA', 'ko': 'KO', 'pt': 'PT', 'ar': 'AR', 'ru': 'RU',
+};
+
+const getLanguageName = (code) => LANGUAGE_NAMES[code] || code?.slice(0, 2)?.toUpperCase() || '';
+
+/**
+ * Google Meet-style caption overlay
+ * - No background box
+ * - Maximum 2 lines displayed
+ * - Old text scrolls away as new text arrives
+ */
+function CaptionOverlay({ captions = [], userLanguage }) {
     const containerRef = useRef(null);
 
-    // Group consecutive captions from the same speaker
-    const groupedCaptions = useMemo(() => {
-        const groups = [];
-        let currentGroup = null;
+    // Process captions into display format
+    const displayCaptions = useMemo(() => {
+        // Take only last few captions
+        const recentCaptions = captions.slice(-5);
 
-        captions.forEach((caption) => {
-            // Find translation for user's language or use original
+        return recentCaptions.map((caption) => {
             let displayText = caption.originalText;
+            let wasTranslated = false;
 
+            // Find translation for user's language
             if (caption.originalLanguage !== userLanguage && caption.translations) {
                 const translation = caption.translations.find(
                     (tr) => tr.language === userLanguage
                 );
                 if (translation) {
                     displayText = translation.text;
+                    wasTranslated = true;
                 }
             }
 
-            const formattedCaption = {
-                ...caption,
-                displayText,
-                isTranslated: caption.originalLanguage !== userLanguage,
+            return {
+                id: caption.utteranceId || caption._id || caption.id || `${caption.speakerUserId}-${caption.timestamp}`,
+                speakerName: caption.speakerName || "Participant",
+                text: displayText,
+                isFinal: caption.isFinal,
+                isTranslated: wasTranslated,
+                originalLang: getLanguageName(caption.originalLanguage),
             };
-
-            // Check if this caption is from the same speaker as current group
-            if (currentGroup && currentGroup.speakerUserId === caption.speakerUserId) {
-                // Add to existing group - update or append based on isFinal
-                if (!caption.isFinal) {
-                    // Replace the last interim message in this group
-                    const lastIdx = currentGroup.messages.length - 1;
-                    if (lastIdx >= 0 && !currentGroup.messages[lastIdx].isFinal) {
-                        currentGroup.messages[lastIdx] = formattedCaption;
-                    } else {
-                        currentGroup.messages.push(formattedCaption);
-                    }
-                } else {
-                    // Final caption - add as new message in same group
-                    currentGroup.messages.push(formattedCaption);
-                }
-                currentGroup.hasInterim = currentGroup.messages.some(m => !m.isFinal);
-            } else {
-                // New speaker - create new group
-                currentGroup = {
-                    speakerUserId: caption.speakerUserId,
-                    speakerName: caption.speakerName || "Participant",
-                    messages: [formattedCaption],
-                    hasInterim: !caption.isFinal,
-                    isTranslated: formattedCaption.isTranslated,
-                };
-                groups.push(currentGroup);
-            }
         });
-
-        // Return only last 4 groups for cleaner display
-        return groups.slice(-4);
     }, [captions, userLanguage]);
 
-    // Auto-scroll to bottom when captions change
+    const [showOverlay, setShowOverlay] = useState(false);
+
+    // Auto-hide timer
+    useEffect(() => {
+        if (captions.length > 0) {
+            setShowOverlay(true);
+            const timer = setTimeout(() => {
+                setShowOverlay(false);
+            }, 5000); // Hide after 5 seconds of no new captions
+            return () => clearTimeout(timer);
+        }
+    }, [captions]);
+
+    // Auto-scroll
     useEffect(() => {
         if (containerRef.current) {
             containerRef.current.scrollTop = containerRef.current.scrollHeight;
         }
-    }, [groupedCaptions]);
+    }, [displayCaptions]);
 
-    if (groupedCaptions.length === 0) {
-        // Only show if actively listening/speaking, otherwise stay invisible
-        if (!isSpeaking) return null;
-
-        return (
-            <div className="bg-base-200/90 backdrop-blur-sm rounded-xl p-4 border border-base-300">
-                <div className="flex items-center gap-3">
-                    <div className={`p-2 rounded-full ${isSpeaking ? 'bg-success animate-pulse' : 'bg-base-300'}`}>
-                        <MicIcon className={`w-4 h-4 ${isSpeaking ? 'text-success-content' : 'text-base-content/50'}`} />
-                    </div>
-                    <div className="flex-1">
-                        <p className="text-sm text-base-content/60">{t("caption.listening", "Listening")}...</p>
-                    </div>
-                </div>
-            </div>
-        );
+    if (displayCaptions.length === 0 || !showOverlay) {
+        return null;
     }
 
     return (
-        <div className="bg-base-200/95 backdrop-blur-sm rounded-xl border border-base-300 overflow-hidden pointer-events-auto">
-            {/* Header */}
-            <div className="px-4 py-2 bg-base-300/50 border-b border-base-300 flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                    <MessageSquareIcon className="w-4 h-4 text-primary" />
-                    <span className="text-sm font-medium">{t("meeting.captions", "Live Captions")}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                    <GlobeIcon className="w-3 h-3 text-base-content/50" />
-                    <span className="text-xs text-base-content/50">{userLanguage}</span>
-                </div>
-            </div>
-
-            {/* Grouped Captions List */}
-            <div
-                ref={containerRef}
-                className="p-3 max-h-48 overflow-y-auto space-y-3"
-            >
-                {groupedCaptions.map((group, groupIdx) => (
-                    <div
-                        key={`${group.speakerUserId}-${groupIdx}`}
-                        className="bg-base-300/30 rounded-lg p-3"
+        <div
+            ref={containerRef}
+            className="w-full flex flex-col items-center pointer-events-none transition-opacity duration-500 ease-in-out"
+            style={{
+                maxHeight: '80px',
+                overflow: 'hidden',
+                opacity: showOverlay ? 1 : 0
+            }}
+        >
+            {/* Show only the last 2 caption entries for 2-line effect */}
+            {displayCaptions.slice(-2).map((caption) => (
+                <div
+                    key={caption.id}
+                    className="text-center px-4 py-2 max-w-3xl bg-black/40 backdrop-blur-sm rounded-lg"
+                >
+                    <span
+                        className={`text-base leading-relaxed ${caption.isFinal ? 'text-white' : 'text-white/70 italic'
+                            }`}
+                        style={{
+                            textShadow: '0 1px 4px rgba(0,0,0,0.8), 0 0 20px rgba(0,0,0,0.5)',
+                        }}
                     >
-                        {/* Speaker Header */}
-                        <div className="flex items-center gap-2 mb-2 pb-2 border-b border-base-300/50">
-                            <div className="w-6 h-6 rounded-full bg-primary/20 flex items-center justify-center">
-                                <UserIcon className="w-3 h-3 text-primary" />
-                            </div>
-                            <span className="text-xs font-bold text-primary">
-                                {group.speakerName}
+                        <span className="text-white/60 text-sm mr-2">
+                            {caption.speakerName}:
+                        </span>
+                        {caption.text}
+                        {caption.isTranslated && (
+                            <span className="ml-2 text-xs text-amber-400/80">
+                                ({caption.originalLang})
                             </span>
-                            {group.isTranslated && (
-                                <span className="text-[10px] px-1.5 py-0.5 bg-accent/20 text-accent rounded-full">
-                                    {t("caption.translated", "Translated")}
-                                </span>
-                            )}
-                            {group.hasInterim && (
-                                <span className="loading loading-dots loading-xs text-success ml-auto"></span>
-                            )}
-                        </div>
-
-                        {/* Combined Messages */}
-                        <p className={`text-sm text-base-content leading-relaxed ${group.hasInterim ? "opacity-80" : ""}`}>
-                            {group.messages.map((msg, msgIdx) => (
-                                <span key={msgIdx} className={!msg.isFinal ? "italic text-base-content/70" : ""}>
-                                    {msg.displayText}
-                                    {msgIdx < group.messages.length - 1 && msg.isFinal ? " " : ""}
-                                </span>
-                            ))}
-                        </p>
-                    </div>
-                ))}
-
-                {/* Active Speaking Indicator */}
-                {isSpeaking && (
-                    <div className="flex items-center gap-2 pt-2 text-success">
-                        <MicIcon className="w-3 h-3" />
-                        <span className="loading loading-dots loading-xs"></span>
-                        <span className="text-xs">{t("caption.listening", "Listening")}...</span>
-                    </div>
-                )}
-            </div>
+                        )}
+                    </span>
+                </div>
+            ))}
         </div>
     );
 }

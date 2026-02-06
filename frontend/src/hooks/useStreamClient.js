@@ -33,8 +33,23 @@ function useStreamClient(session, loadingSession, user) {
         setStreamClient(client);
 
         videoCall = client.call("default", session.callId);
+
         await videoCall.join({ create: true });
         setCall(videoCall);
+
+        // Apply device preferences AFTER joining to ensure tracks are published
+        const savedMicState = localStorage.getItem('micEnabled');
+        const savedCamState = localStorage.getItem('camEnabled');
+
+        if (savedMicState === 'false') {
+          console.log("Initializing call with Mic OFF (Post-Join)");
+          await videoCall.microphone.disable();
+        }
+
+        if (savedCamState === 'false') {
+          console.log("Initializing call with Cam OFF (Post-Join)");
+          await videoCall.camera.disable();
+        }
       } catch (error) {
         toast.error(`Video call error: ${error.response?.data?.error || error.message}`);
         console.error("Error init call", error);

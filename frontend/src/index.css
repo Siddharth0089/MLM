@@ -17,11 +17,11 @@
 
   /* Glassmorphism Utility */
   .glass-panel {
-    @apply bg-base-100/60 backdrop-blur-xl border border-white/10 shadow-xl;
+    @apply bg-base-100/60 backdrop-blur-xl border border-white/10;
   }
 
   .glass-panel-dark {
-    @apply bg-black/40 backdrop-blur-xl border border-white/10 shadow-xl;
+    @apply bg-black/40 backdrop-blur-xl border border-white/10;
   }
 
   /* Enhanced Button Styles */
@@ -37,4 +37,221 @@
   .resize-handle {
     @apply w-3 -ml-1.5 z-10 hover:bg-white/5 transition-colors duration-200 cursor-col-resize flex items-center justify-center;
   }
+}
+
+/* Stream Video SDK Custom Overrides */
+.custom-stream-theme {
+  --str-video__primary-color: transparent;
+  --str-video__secondary-color: transparent;
+  --str-video__background: transparent;
+
+  /* Override all border/ring related CSS variables */
+  --str-video__border-radius: 12px;
+  --str-video__border-color: transparent;
+  --str-video__ring-color: transparent;
+  --str-video__speaker-border-color: transparent;
+  --str-video__dominant-speaker-color: transparent;
+  --str-video__speaking-indicator-color: transparent;
+}
+
+/* Force hide any ring/border on all Stream elements */
+.custom-stream-theme,
+.custom-stream-theme *,
+.custom-stream-theme [class*="str-video"] {
+  --tw-ring-color: transparent !important;
+  --tw-ring-shadow: none !important;
+  --tw-ring-offset-shadow: none !important;
+}
+
+/* Hide Stream SDK default controls since we have custom ones */
+.custom-stream-theme .str-video__call-controls {
+  display: none !important;
+}
+
+/* Fix video container styling */
+.custom-stream-theme .str-video__speaker-layout {
+  background: transparent !important;
+}
+
+.custom-stream-theme .str-video__participant-view {
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Target ALL participant view variants including speaking/dominant speaker */
+.custom-stream-theme .str-video__participant-view,
+.custom-stream-theme .str-video__participant-view--speaking,
+.custom-stream-theme .str-video__participant-view--dominant-speaker,
+.custom-stream-theme [class*="str-video__participant-view"] {
+  border: 0 !important;
+  border-color: transparent !important;
+  outline: none !important;
+  outline-color: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Active Speaker Indicator with Glowing Border */
+.custom-stream-theme .str-video__participant-view--speaking,
+.custom-stream-theme .str-video__participant-view--dominant-speaker {
+  border: 3px solid #3b82f6 !important;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.6),
+    0 0 40px rgba(59, 130, 246, 0.3),
+    inset 0 0 0 1px rgba(59, 130, 246, 0.2) !important;
+  animation: pulse-glow 1.5s ease-in-out infinite !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.6),
+      0 0 40px rgba(59, 130, 246, 0.3),
+      inset 0 0 0 1px rgba(59, 130, 246, 0.2);
+  }
+
+  50% {
+    box-shadow: 0 0 30px rgba(59, 130, 246, 0.8),
+      0 0 60px rgba(59, 130, 246, 0.5),
+      inset 0 0 0 1px rgba(59, 130, 246, 0.3);
+  }
+}
+
+.custom-stream-theme .str-video__video {
+  border-radius: 12px !important;
+}
+
+/* Hide any progress bars or range inputs that appear from SDK */
+.custom-stream-theme progress,
+.custom-stream-theme input[type="range"] {
+  display: none !important;
+}
+
+/* Hide SDK notification bars */
+.custom-stream-theme .str-video__notification-bar,
+.custom-stream-theme .str-video__notification,
+.custom-stream-theme .str-video__notification-list {
+  display: none !important;
+}
+
+/* Fix speaker layout wrapper */
+.custom-stream-theme .str-video__speaker-layout__wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+/* Style participant name badges */
+.custom-stream-theme .str-video__participant-details {
+  background: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+  border-radius: 8px !important;
+  padding: 4px 10px !important;
+}
+
+/* Hide audio level indicators that may appear as red bars */
+.custom-stream-theme .str-video__audio-level-indicator,
+.custom-stream-theme .str-video__sound-indicator,
+.custom-stream-theme [class*="audio-level"],
+.custom-stream-theme [class*="sound-indicator"] {
+  display: none !important;
+}
+
+/* Hide connection quality bars if they're misrendering */
+.custom-stream-theme .str-video__connection-quality {
+  display: none !important;
+}
+
+/* Fix video clipping issues */
+.custom-stream-theme .str-video__speaker-layout,
+.custom-stream-theme .str-video__speaker-layout__wrapper,
+.custom-stream-theme .str-video__speaker-layout__spotlight {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
+  overflow: hidden !important;
+}
+
+.custom-stream-theme .str-video__participant-view,
+.custom-stream-theme .str-video__video-placeholder {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+}
+
+.custom-stream-theme video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 12px !important;
+}
+
+/* Remove any blue borders or outlines */
+.custom-stream-theme .str-video__participant-view,
+.custom-stream-theme .str-video__speaker-layout,
+.custom-stream-theme .str-video__speaker-layout__spotlight {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* AGGRESSIVE: Remove ALL borders from Stream SDK elements */
+.custom-stream-theme *,
+.custom-stream-theme *::before,
+.custom-stream-theme *::after {
+  border-color: transparent !important;
+  outline-color: transparent !important;
+}
+
+/* Target specific Stream SDK border classes */
+.custom-stream-theme [class*="str-video"] {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove focus outlines */
+.custom-stream-theme [class*="str-video"]:focus,
+.custom-stream-theme [class*="str-video"]:focus-visible,
+.custom-stream-theme [class*="str-video"]:focus-within {
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Specifically target participant view borders */
+.custom-stream-theme .str-video__participant-view {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  border-radius: 12px !important;
+}
+
+/* Target the spotlight container */
+.custom-stream-theme .str-video__speaker-layout__spotlight,
+.custom-stream-theme .str-video__speaker-layout__spotlight>div {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Target speaking indicator borders */
+.custom-stream-theme .str-video__participant--speaking,
+.custom-stream-theme .str-video__participant--dominant-speaker {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Ensure no scrollbars appear */
+.custom-stream-theme * {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.custom-stream-theme *::-webkit-scrollbar {
+  display: none;
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { XIcon, SendIcon } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
@@ -8,14 +8,15 @@ const ChatPanel = ({ meetingId, userId, userName, userLanguage, socket, onClose 
     const [inputText, setInputText] = useState("");
     const [isLoading, setIsLoading] = useState(true);
     const messagesEndRef = useRef(null);
+    const messageCountRef = useRef(0);
 
-    // Scroll to bottom when new messages arrive
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
+    // Optimized scroll - only scroll when NEW message arrives
     useEffect(() => {
-        scrollToBottom();
+        if (messages.length > messageCountRef.current) {
+            messageCountRef.current = messages.length;
+            // Use instant scroll instead of smooth to avoid lag
+            messagesEndRef.current?.scrollIntoView({ behavior: "auto" });
+        }
     }, [messages]);
 
     // Load chat history and set up listeners
@@ -28,6 +29,7 @@ const ChatPanel = ({ meetingId, userId, userName, userLanguage, socket, onClose 
         // Handle incoming history
         const handleHistory = ({ messages: historyMessages }) => {
             setMessages(historyMessages || []);
+            messageCountRef.current = historyMessages?.length || 0;
             setIsLoading(false);
         };
 
@@ -53,8 +55,8 @@ const ChatPanel = ({ meetingId, userId, userName, userLanguage, socket, onClose 
         };
     }, [socket, meetingId]);
 
-    // Send message handler
-    const handleSend = () => {
+    // Send message handler - memoized with useCallback
+    const handleSend = useCallback(() => {
         if (!inputText.trim() || !socket) return;
 
         socket.emit("chat:send", {
@@ -66,33 +68,33 @@ const ChatPanel = ({ meetingId, userId, userName, userLanguage, socket, onClose 
         });
 
         setInputText("");
-    };
+    }, [inputText, socket, meetingId, userId, userName, userLanguage]);
 
-    // Handle Enter key
-    const handleKeyPress = (e) => {
+    // Handle Enter key - memoized
+    const handleKeyPress = useCallback((e) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
             handleSend();
         }
-    };
+    }, [handleSend]);
 
-    // Get translated text for display
-    const getDisplayText = (message) => {
+    // Get translated text for display - memoized
+    const getDisplayText = useCallback((message) => {
         // Check if there's a translation for user's language
         if (message.translations && message.translations[userLanguage]) {
             return message.translations[userLanguage];
         }
         // Fall back to original text
         return message.originalText;
-    };
+    }, [userLanguage]);
 
-    // Format time
-    const formatTime = (timestamp) => {
+    // Format time - memoized
+    const formatTime = useCallback((timestamp) => {
         return new Date(timestamp).toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit"
         });
-    };
+    }, []);
 
     if (isLoading) {
         return (
@@ -144,8 +146,8 @@ const ChatPanel = ({ meetingId, userId, userName, userLanguage, socket, onClose 
                                 {/* Message bubble */}
                                 <div
                                     className={`max-w-[80%] rounded-2xl px-4 py-2 ${isOwn
-                                            ? "bg-primary text-primary-content rounded-br-md"
-                                            : "bg-base-200 text-base-content rounded-bl-md"
+                                        ? "bg-primary text-primary-content rounded-br-md"
+                                        : "bg-base-200 text-base-content rounded-bl-md"
                                         }`}
                                 >
                                     <p className="text-sm break-words">{getDisplayText(msg)}</p>
